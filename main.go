@@ -34,7 +34,7 @@ func globalInit() {
 	if err != nil {
 		log.Fatal("Load config err:", err)
 	}
-	fmt.Printf("%v\n", *GLOBAL_CFG)
+	//fmt.Printf("%v\n", *GLOBAL_CFG)
 	log.SetOutput(&lumberjack.Logger{
 		Filename:   fmt.Sprintf("%s/app.log", GLOBAL_CFG.LogDir),
 		MaxSize:    50, // megabytes

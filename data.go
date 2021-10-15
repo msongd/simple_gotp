@@ -60,6 +60,17 @@ func (cfg *OtpConfig) Get(username string) (*UserDetail, bool) {
 	return cloned, found
 }
 
+func (cfg *OtpConfig) Remove(username string) bool {
+	cfg.Lock()
+	defer cfg.Unlock()
+	_, found := cfg.Users[username]
+	if found {
+		delete(cfg.Users, username)
+		return true
+	}
+	return false
+}
+
 func (cfg *OtpConfig) GetAllUsers() []*UserDetail {
 	cfg.Lock()
 	defer cfg.Unlock()
