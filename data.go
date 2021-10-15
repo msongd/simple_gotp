@@ -10,15 +10,14 @@ import (
 	"os"
 	"strconv"
 	"sync"
+
+	"github.com/pquerna/otp"
+	"github.com/pquerna/otp/totp"
 )
 
 type TokenDetail struct {
-	ID          string `json:"id"`
-	AccountName string `json:"account_name"`
-	Issuer      string `json:"issuer"`
-	//	Period int `json:"period"`
-	Secret string `json:"secret"`
-	//	Digits int `json:"digits"`
+	ID  string `json:"id"`
+	URL string `json:"url"`
 }
 
 type UserDetail struct {
@@ -106,6 +105,18 @@ func (cfg *OtpConfig) HasUser(username string) bool {
 	return true
 }
 
+func (cfg *OtpConfig) GetAllTokens(username string) ([]TokenDetail, error) {
+	cfg.Lock()
+	defer cfg.Unlock()
+	u, found := cfg.Users[username]
+	if !found {
+		return nil, nil
+	}
+	tokens := make([]TokenDetail, len(u.Tokens))
+	copy(tokens, u.Tokens)
+	return tokens, nil
+}
+
 func (cfg *OtpConfig) AddToken(username string, issuer string) (bool, error) {
 	cfg.Lock()
 	defer cfg.Unlock()
@@ -115,10 +126,19 @@ func (cfg *OtpConfig) AddToken(username string, issuer string) (bool, error) {
 		cfg.Users[username] = u
 		u.Username = username
 	}
+
+	newKey, err := totp.Generate(totp.GenerateOpts{
+		Issuer:      issuer,
+		AccountName: username,
+	})
+
+	if err != nil {
+		log.Println("Generate new token error:", err)
+		return false, err
+	}
+	//t.ID = fmt.Sprintf("%d", l+1)
 	t := TokenDetail{}
-	t.AccountName = username
-	t.Issuer = issuer
-	t.Secret = base32.StdEncoding.EncodeToString(Rand16())
+	t.URL = newKey.URL()
 	l := len(u.Tokens)
 	if l > 0 {
 		lastIdStr := u.Tokens[l-1].ID
@@ -136,7 +156,23 @@ func (cfg *OtpConfig) AddToken(username string, issuer string) (bool, error) {
 	u.Tokens = append(u.Tokens, t)
 	return true, nil
 }
-func (cfg *OtpConfig) UpdateToken(username string, tokenId string, issuer string, secret string) (bool, error) {
+func (cfg *OtpConfig) GetToken(username string, tokenId string) (*TokenDetail, error) {
+	cfg.Lock()
+	defer cfg.Unlock()
+	u, found := cfg.Users[username]
+	if !found {
+		return nil, nil
+	}
+	for _, t := range u.Tokens {
+		if tokenId == t.ID {
+			returned := t
+			return &returned, nil
+		}
+	}
+	return nil, nil
+}
+
+func (cfg *OtpConfig) UpdateToken(username string, tokenId string, url string) (bool, error) {
 	cfg.Lock()
 	defer cfg.Unlock()
 	u, found := cfg.Users[username]
@@ -145,15 +181,23 @@ func (cfg *OtpConfig) UpdateToken(username string, tokenId string, issuer string
 		cfg.Users[username] = u
 		u.Username = username
 	}
+	key, err := otp.NewKeyFromURL(url)
+	if err != nil {
+		log.Println("Parse url error:", err)
+		return false, err
+	}
+	keyAccName := key.AccountName()
+	if keyAccName != username {
+		log.Println("Token url has different username:", keyAccName)
+		return false, nil
+	}
 	for i, t := range u.Tokens {
 		if tokenId == t.ID {
-			u.Tokens[i].AccountName = username
-			u.Tokens[i].Issuer = issuer
-			u.Tokens[i].Secret = secret
+			u.Tokens[i].URL = url
 			return true, nil
 		}
 	}
-	return true, nil
+	return false, nil
 }
 
 func (cfg *OtpConfig) RemoveToken(username string, tokenId string) (bool, error) {
@@ -248,8 +292,12 @@ func (cfg *OtpConfig) GetActiveToken(username string) (bool, *TokenDetail) {
 	return false, nil
 }
 
-func Rand16() []byte {
-	c := 16
+func (tok TokenDetail) GetOtp() {
+
+}
+
+func Rand20() []byte {
+	c := 20
 	b := make([]byte, c)
 	_, err := rand.Read(b)
 	if err != nil {
