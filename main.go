@@ -98,8 +98,9 @@ func main() {
 	// Optionally, you could run srv.Shutdown in a goroutine and block on
 	// <-ctx.Done() if your application should wait for other services
 	// to finalize based on context cancellation.
+	//workingEnv.Db.SaveToFile(GLOBAL_CFG.DataFile)
 	log.Println("Shutting down")
-	os.Exit(0)
+	//os.Exit(0)
 }
 func test() {
 	cfg := NewOtpConfig()

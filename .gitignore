@@ -2,3 +2,4 @@ simple_gotp
 bin/*
 log/*.log
 conf/*.json
+data/*.json

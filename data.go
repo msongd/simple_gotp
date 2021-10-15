@@ -75,11 +75,11 @@ func (cfg *OtpConfig) GetAllUsers() []*UserDetail {
 func (cfg *OtpConfig) AddUser(username string) (bool, error) {
 	cfg.Lock()
 	defer cfg.Unlock()
-	u, found := cfg.Users[username]
+	_, found := cfg.Users[username]
 	if !found {
-		u = NewUser()
-		cfg.Users[username] = u
+		u := NewUser()
 		u.Username = username
+		cfg.Users[username] = u
 		return true, nil
 	}
 	return false, nil
@@ -199,6 +199,7 @@ func LoadFromFile(filename string) (*OtpConfig, error) {
 	return cfg, nil
 }
 func (cfg *OtpConfig) SaveToFile(filename string) error {
+	log.Println("Saving data...")
 	b, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
 		log.Println(err)
@@ -209,6 +210,7 @@ func (cfg *OtpConfig) SaveToFile(filename string) error {
 		log.Println("Save data to file err:", err)
 		return err
 	}
+	log.Println("Data saved...")
 	return nil
 }
 
