@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/gorilla/handlers"
-	"github.com/gorilla/mux"
 	lumberjack "gopkg.in/natefinch/lumberjack.v2"
 )
 
@@ -31,6 +30,7 @@ func globalInit() {
 	if err != nil {
 		log.Fatal("Load config err:", err)
 	}
+	fmt.Printf("%v\n", *GLOBAL_CFG)
 	log.SetOutput(&lumberjack.Logger{
 		Filename:   fmt.Sprintf("%s/app.log", GLOBAL_CFG.LogDir),
 		MaxSize:    50, // megabytes
@@ -41,23 +41,26 @@ func globalInit() {
 }
 func main() {
 	globalInit()
+	log.Println("Starting")
 	var wait time.Duration
 	flag.DurationVar(&wait, "graceful-timeout", time.Second*15, "the duration for which the server gracefully wait for existing connections to finish - e.g. 15s or 1m")
 	flag.Parse()
 
-	r := mux.NewRouter()
-	// Add your routes as needed
-	r.HandleFunc("/public/verify", VerifyHandler).Methods("POST")
-	r.HandleFunc("/auth/token", TokenHandler)
-	r.HandleFunc("/", HomeHandler)
-
+	r := MakeRouter()
+	l := &lumberjack.Logger{
+		Filename:   fmt.Sprintf("%s/access.log", GLOBAL_CFG.LogDir),
+		MaxSize:    50, // megabytes
+		MaxBackups: 3,
+		MaxAge:     28,    //days
+		Compress:   false, // disabled by default
+	}
 	srv := &http.Server{
 		Addr: GLOBAL_CFG.Listen,
 		// Good practice to set timeouts to avoid Slowloris attacks.
 		WriteTimeout: time.Second * 15,
 		ReadTimeout:  time.Second * 15,
 		IdleTimeout:  time.Second * 60,
-		Handler:      handlers.CombinedLoggingHandler(log.Writer(), r), // Pass our instance of gorilla/mux in.
+		Handler:      handlers.CombinedLoggingHandler(l, r), // Pass our instance of gorilla/mux in.
 	}
 
 	// Run our server in a goroutine so that it doesn't block.

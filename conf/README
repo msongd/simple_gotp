@@ -1,0 +1,6 @@
+json config files here
+sample:
+{
+  "listen":":8080",
+  "log_dir": "./log"
+}

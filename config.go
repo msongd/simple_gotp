@@ -29,6 +29,10 @@ func (cfg *Config) LoadConfig(filename string) error {
 		log.Println("Read file err:", err)
 		return err
 	}
-	json.Unmarshal(byteValue, cfg)
+	err = json.Unmarshal(byteValue, cfg)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
 	return nil
 }
