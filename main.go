@@ -19,6 +19,10 @@ var (
 	GLOBAL_CFG  = NewConfig()
 )
 
+type Env struct {
+	Db *OtpConfig
+}
+
 func globalInit() {
 	if len(os.Args) == 1 {
 		flag.PrintDefaults()
@@ -46,7 +50,14 @@ func main() {
 	flag.DurationVar(&wait, "graceful-timeout", time.Second*15, "the duration for which the server gracefully wait for existing connections to finish - e.g. 15s or 1m")
 	flag.Parse()
 
-	r := MakeRouter()
+	workingEnv := &Env{}
+	db, err := LoadFromFile(GLOBAL_CFG.DataFile)
+	if err != nil {
+		log.Fatal("Unable to load data file, err:", err)
+	}
+	workingEnv.Db = db
+	defer workingEnv.Db.SaveToFile(GLOBAL_CFG.DataFile)
+	r := MakeRouter(workingEnv)
 	l := &lumberjack.Logger{
 		Filename:   fmt.Sprintf("%s/access.log", GLOBAL_CFG.LogDir),
 		MaxSize:    50, // megabytes

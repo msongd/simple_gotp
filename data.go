@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/rand"
 	"encoding/base32"
 	"encoding/json"
 	"fmt"
@@ -43,11 +44,55 @@ func NewOtpConfig() *OtpConfig {
 	return &m
 }
 
+func (u *UserDetail) Cloned() *UserDetail {
+	newUser := NewUser()
+	newUser.ActiveToken = u.ActiveToken
+	newUser.Username = u.Username
+	copy(newUser.Tokens, u.Tokens)
+	return newUser
+}
+
 func (cfg *OtpConfig) Get(username string) (*UserDetail, bool) {
 	cfg.Lock()
 	defer cfg.Unlock()
 	c, found := cfg.Users[username]
-	return c, found
+	cloned := c.Cloned()
+	return cloned, found
+}
+
+func (cfg *OtpConfig) GetAllUsers() []*UserDetail {
+	cfg.Lock()
+	defer cfg.Unlock()
+	all := make([]*UserDetail, len(cfg.Users))
+	i := 0
+	for _, v := range cfg.Users {
+		all[i] = v.Cloned()
+		i = i + 1
+	}
+	return all
+}
+
+func (cfg *OtpConfig) AddUser(username string) (bool, error) {
+	cfg.Lock()
+	defer cfg.Unlock()
+	u, found := cfg.Users[username]
+	if !found {
+		u = NewUser()
+		cfg.Users[username] = u
+		u.Username = username
+		return true, nil
+	}
+	return false, nil
+}
+
+func (cfg *OtpConfig) HasUser(username string) bool {
+	cfg.Lock()
+	defer cfg.Unlock()
+	_, found := cfg.Users[username]
+	if !found {
+		return false
+	}
+	return true
 }
 
 func (cfg *OtpConfig) AddToken(username string, issuer string) (bool, error) {
@@ -62,7 +107,7 @@ func (cfg *OtpConfig) AddToken(username string, issuer string) (bool, error) {
 	t := TokenDetail{}
 	t.AccountName = username
 	t.Issuer = issuer
-	t.Secret = base32.StdEncoding.EncodeToString([]byte("test"))
+	t.Secret = base32.StdEncoding.EncodeToString(Rand16())
 	l := len(u.Tokens)
 	if l > 0 {
 		lastIdStr := u.Tokens[l-1].ID
@@ -78,6 +123,25 @@ func (cfg *OtpConfig) AddToken(username string, issuer string) (bool, error) {
 	}
 	//t.ID = fmt.Sprintf("%d", l+1)
 	u.Tokens = append(u.Tokens, t)
+	return true, nil
+}
+func (cfg *OtpConfig) UpdateToken(username string, tokenId string, issuer string, secret string) (bool, error) {
+	cfg.Lock()
+	defer cfg.Unlock()
+	u, found := cfg.Users[username]
+	if !found {
+		u = NewUser()
+		cfg.Users[username] = u
+		u.Username = username
+	}
+	for i, t := range u.Tokens {
+		if tokenId == t.ID {
+			u.Tokens[i].AccountName = username
+			u.Tokens[i].Issuer = issuer
+			u.Tokens[i].Secret = secret
+			return true, nil
+		}
+	}
 	return true, nil
 }
 
@@ -134,11 +198,25 @@ func LoadFromFile(filename string) (*OtpConfig, error) {
 	json.Unmarshal(byteValue, cfg)
 	return cfg, nil
 }
+func (cfg *OtpConfig) SaveToFile(filename string) error {
+	b, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	err = ioutil.WriteFile(filename, b, 0644)
+	if err != nil {
+		log.Println("Save data to file err:", err)
+		return err
+	}
+	return nil
+}
 
 func (cfg *OtpConfig) Dump() {
 	b, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		return
 	}
 	log.Println(string(b))
 }
@@ -155,4 +233,19 @@ func (cfg *OtpConfig) GetActiveToken(username string) (bool, *TokenDetail) {
 		}
 	}
 	return false, nil
+}
+
+func Rand16() []byte {
+	c := 16
+	b := make([]byte, c)
+	_, err := rand.Read(b)
+	if err != nil {
+		log.Println("error:", err)
+		return nil
+	}
+	return b
+}
+
+func MakeSecret(b []byte) string {
+	return base32.StdEncoding.EncodeToString(b)
 }
