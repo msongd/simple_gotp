@@ -1,10 +1,12 @@
 package main
 
 import (
+	"net/http"
+
 	"github.com/gorilla/mux"
 )
 
-func MakeRouter(env *Env) *mux.Router {
+func MakeRouter(env *Env, staticDir string) *mux.Router {
 	r := mux.NewRouter()
 	// Add your routes as needed
 	r.HandleFunc("/public/verify", env.VerifyHandler).Methods("POST")
@@ -20,6 +22,7 @@ func MakeRouter(env *Env) *mux.Router {
 	r.HandleFunc("/auth/token/{user}/{token}", env.DeleteTokenHandler).Methods("DELETE")
 	r.HandleFunc("/auth/token/{user}", env.GetAllTokenHandler).Methods("GET")
 	r.HandleFunc("/auth/token/{user}", env.AddTokenHandler).Methods("POST")
+	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(staticDir))))
 	r.PathPrefix("/").HandlerFunc(env.CatchAllHandler)
 	return r
 }

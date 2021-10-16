@@ -17,9 +17,9 @@ func (env *Env) VerifyHandler(w http.ResponseWriter, r *http.Request) {
 
 func (env *Env) CatchAllHandler(w http.ResponseWriter, r *http.Request) {
 	//vars := mux.Vars(r)
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "In Home\n")
-
+	//w.WriteHeader(http.StatusOK)
+	//fmt.Fprintf(w, "In Home\n")
+	http.Redirect(w, r, "/static/index.html", http.StatusTemporaryRedirect)
 }
 
 func (env *Env) GetAllUserHandler(w http.ResponseWriter, r *http.Request) {

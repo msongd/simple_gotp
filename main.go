@@ -17,6 +17,7 @@ import (
 var (
 	CONFIG_FILE = flag.String("f", "config.json", "Config file")
 	GLOBAL_CFG  = NewConfig()
+	WAIT        time.Duration
 )
 
 type Env struct {
@@ -28,6 +29,7 @@ func globalInit() {
 		flag.PrintDefaults()
 		os.Exit(0)
 	}
+	flag.DurationVar(&WAIT, "graceful-timeout", time.Second*15, "the duration for which the server gracefully wait for existing connections to finish - e.g. 15s or 1m")
 	flag.Parse()
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	err := GLOBAL_CFG.LoadConfig(*CONFIG_FILE)
@@ -46,9 +48,9 @@ func globalInit() {
 func main() {
 	globalInit()
 	log.Println("Starting")
-	var wait time.Duration
-	flag.DurationVar(&wait, "graceful-timeout", time.Second*15, "the duration for which the server gracefully wait for existing connections to finish - e.g. 15s or 1m")
-	flag.Parse()
+	//var wait time.Duration
+	//
+	//flag.Parse()
 
 	workingEnv := &Env{}
 	db, err := LoadFromFile(GLOBAL_CFG.DataFile)
@@ -57,7 +59,7 @@ func main() {
 	}
 	workingEnv.Db = db
 	defer workingEnv.Db.SaveToFile(GLOBAL_CFG.DataFile)
-	r := MakeRouter(workingEnv)
+	r := MakeRouter(workingEnv, GLOBAL_CFG.FrontendDir)
 	l := &lumberjack.Logger{
 		Filename:   fmt.Sprintf("%s/access.log", GLOBAL_CFG.LogDir),
 		MaxSize:    50, // megabytes
@@ -90,7 +92,7 @@ func main() {
 	<-c
 
 	// Create a deadline to wait for.
-	ctx, cancel := context.WithTimeout(context.Background(), wait)
+	ctx, cancel := context.WithTimeout(context.Background(), WAIT)
 	defer cancel()
 	// Doesn't block if no connections, but will otherwise wait
 	// until the timeout deadline.
