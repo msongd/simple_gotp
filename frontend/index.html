@@ -36,10 +36,6 @@
         </div>
       </nav>
       <div class="starter-template">
-      <h1>Bootstrap starter template</h1>
-      <p class="lead">
-        {{ message }}
-      </p>
       <users v-on:select-user="onSelectUser"></users>
       <tokens ref="tokens" v-bind:selected-username="selectedUsername"></tokens>
       </div>
@@ -49,14 +45,12 @@
       var app = new Vue({
         el: '#app',
         data: {
-          message: 'Hello Vue!',
-          selectedUsername: ""
+          selectedUsername:""
         },
         methods: {
           onSelectUser: function (user) {
             var self = this;
             self.selectedUsername = user;
-            console.log("index.html update selectedUsername:", user)
             self.$refs.tokens.fetchTokens(user);
           }
         }
