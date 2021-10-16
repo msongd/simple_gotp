@@ -16,8 +16,9 @@ import (
 )
 
 type TokenDetail struct {
-	ID  string `json:"id"`
-	URL string `json:"url"`
+	ID     string `json:"id"`
+	URL    string `json:"url"`
+	Issuer string `json:"issuer"`
 }
 
 type UserDetail struct {
@@ -47,7 +48,7 @@ func (u *UserDetail) Cloned() *UserDetail {
 	newUser := NewUser()
 	newUser.ActiveToken = u.ActiveToken
 	newUser.Username = u.Username
-	copy(newUser.Tokens, u.Tokens)
+	//copy(newUser.Tokens, u.Tokens)
 	return newUser
 }
 
@@ -113,7 +114,16 @@ func (cfg *OtpConfig) GetAllTokens(username string) ([]TokenDetail, error) {
 		return nil, nil
 	}
 	tokens := make([]TokenDetail, len(u.Tokens))
-	copy(tokens, u.Tokens)
+	for i, t := range u.Tokens {
+		tokens[i] = t
+		k, err := otp.NewKeyFromURL(t.URL)
+		if err != nil {
+			log.Println("Parsing url to token err:", err)
+		} else {
+			tokens[i].Issuer = k.Issuer()
+		}
+	}
+	//copy(tokens, u.Tokens)
 	return tokens, nil
 }
 
@@ -166,6 +176,12 @@ func (cfg *OtpConfig) GetToken(username string, tokenId string) (*TokenDetail, e
 	for _, t := range u.Tokens {
 		if tokenId == t.ID {
 			returned := t
+			k, err := otp.NewKeyFromURL(t.URL)
+			if err != nil {
+				log.Println("Parsing url to token err:", err)
+				return nil, err
+			}
+			returned.Issuer = k.Issuer()
 			return &returned, nil
 		}
 	}
