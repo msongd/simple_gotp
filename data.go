@@ -166,6 +166,42 @@ func (cfg *OtpConfig) AddToken(username string, issuer string) (bool, error) {
 	u.Tokens = append(u.Tokens, t)
 	return true, nil
 }
+func (cfg *OtpConfig) ImportToken(username string, url string) (bool, error) {
+	cfg.Lock()
+	defer cfg.Unlock()
+	u, found := cfg.Users[username]
+	if !found {
+		u = NewUser()
+		cfg.Users[username] = u
+		u.Username = username
+	}
+
+	newKey, err := otp.NewKeyFromURL(url)
+	if err != nil {
+		log.Println("Generate new token error:", err)
+		return false, err
+	}
+	//t.ID = fmt.Sprintf("%d", l+1)
+	t := TokenDetail{}
+	t.URL = newKey.URL()
+	l := len(u.Tokens)
+	if l > 0 {
+		lastIdStr := u.Tokens[l-1].ID
+		id, err := strconv.Atoi(lastIdStr)
+		if err != nil {
+			log.Println("Convert last id to int err:", err)
+			t.ID = fmt.Sprintf("%s1", lastIdStr)
+		} else {
+			t.ID = fmt.Sprintf("%d", id+1)
+		}
+	} else {
+		t.ID = "1"
+	}
+	//t.ID = fmt.Sprintf("%d", l+1)
+	u.Tokens = append(u.Tokens, t)
+	return true, nil
+}
+
 func (cfg *OtpConfig) GetToken(username string, tokenId string) (*TokenDetail, error) {
 	cfg.Lock()
 	defer cfg.Unlock()

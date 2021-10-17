@@ -3,7 +3,8 @@ Vue.component('tokens', {
     return {
         tokens: [],
         selectedToken: "",
-        newTokenIssuer: ""
+        newTokenIssuer: "",
+        newTokenUrl: ""
     }
   },
   mounted: function() {
@@ -76,10 +77,43 @@ Vue.component('tokens', {
             console.log('Looks like there was a problem. Status Code: ' + response.status);
             return;
           } else {
-            self.tokens.push(t);
+            self.fetchTokens(self.selectedUsername);
+            self.newTokenIssuer = "" ;
           }
       });
-      
+    },
+    importToken() {
+      var self = this ;
+      console.log("Inside importToken():username,newTokenUrl:",self.selectedUsername,self.newTokenUrl);
+      if (self.newTokenUrl == undefined || self.newTokenUrl=="") {
+        console.log("Empty new token url -> ignore");
+        return;
+      }
+      if (self.selectedUsername == undefined || self.selectedUsername=="") {
+        console.log("Empty selectedUsername -> ignore");
+        return;
+      }
+      var newU = new URL(self.newTokenUrl);
+      t = { url: self.newTokenUrl};
+      console.log("Prepare to POST:", t)
+      fetch('/auth/token/'+self.selectedUsername+'/import', {
+        method: 'POST',
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "none"
+        },
+        body: JSON.stringify(t)
+      }).then(
+        function(response) {
+          if (response.status !== 201) {
+            console.log('Looks like there was a problem. Status Code: ' + response.status);
+            return;
+          } else {
+            //self.tokens.push(importedToken);
+            self.fetchTokens(self.selectedUsername);
+            self.newTokenUrl = "";
+          }
+      });
     }
 },
   template: `
@@ -98,9 +132,9 @@ Vue.component('tokens', {
               <div class="col-md-4">
                 <div class="input-group">
                   <span class="input-group-btn">
-                    <button class="btn btn-primary" type="button" @click="importToken">Import token for:</button>
+                    <button class="btn btn-primary" type="button" @click="importToken">Import token from:</button>
                   </span>
-                  <input type="text" class="form-control" placeholder="Issuer..." v-model="newTokenIssuer">
+                  <input type="text" class="form-control" placeholder="Token..." v-model="newTokenUrl">
                 </div><!-- /input-group -->
               </div> <!-- class="col-md-4" -->
               <table class="table table-striped table-sm table-condensed ">
@@ -118,7 +152,7 @@ Vue.component('tokens', {
                     <td>{{t.issuer}}</td>
                     <td>{{t.url}}</td>
                     <td>
-                    <button type="button" class="btn btn-info btn-sm" >Tokens</button>
+                    <button type="button" class="btn btn-info btn-sm" >Delete</button>
                     </td>
                   </tr>
                 </tbody>

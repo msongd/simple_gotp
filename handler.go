@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 
 	"github.com/gorilla/mux"
 )
@@ -154,6 +155,18 @@ func (env *Env) GetAllTokenHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error getting token", http.StatusBadRequest)
 		return
 	}
+	// mask all url
+	for i, _ := range tokens {
+		maskedUrl, err := url.Parse(tokens[i].URL)
+		if err != nil {
+			log.Println("Parsing url err:", err)
+		}
+		//log.Println(maskedUrl.Scheme)
+		//log.Println(maskedUrl.Host)
+		//log.Println(maskedUrl.Path)
+		tokens[i].URL = fmt.Sprintf("%s://%s%s***", maskedUrl.Scheme, maskedUrl.Host, maskedUrl.Path)
+	}
+	//
 	b, err := json.Marshal(tokens)
 	if err != nil {
 		log.Println(err)
@@ -164,6 +177,31 @@ func (env *Env) GetAllTokenHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write(b)
 }
+
+func (env *Env) ImportTokenHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	//w.WriteHeader(http.StatusOK)
+	//fmt.Fprintf(w, "In Home\n")
+	username, found := vars["user"]
+	if !found {
+		log.Println("Not found username in uri")
+		http.Error(w, "Error getting username in uri", http.StatusBadRequest)
+		return
+	}
+	u := &struct {
+		Url string
+	}{}
+	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
+		log.Println(err)
+		http.Error(w, "Error decoding response object", http.StatusBadRequest)
+		return
+	}
+	env.Db.ImportToken(username, u.Url)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	fmt.Fprintf(w, "{}")
+}
+
 func (env *Env) AddTokenHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	//w.WriteHeader(http.StatusOK)
@@ -230,6 +268,8 @@ func (env *Env) GetOTPHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (env *Env) UpdateTokenHandler(w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "Bad request", http.StatusBadRequest)
+	return
 	vars := mux.Vars(r)
 	//w.WriteHeader(http.StatusOK)
 	//fmt.Fprintf(w, "In Home\n")

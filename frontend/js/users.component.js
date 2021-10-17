@@ -100,6 +100,7 @@ Vue.component('users', {
               return;
             } else {
               self.users.push(u);
+              self.newUsername = "";
             }
         });
       }
@@ -131,7 +132,6 @@ Vue.component('users', {
                 <td>{{u.username}}</td>
                 <td>{{u.active_token}}</td>
                 <td>
-                <button type="button" class="btn btn-info btn-sm" @click="fetchToken(u.username)">Tokens</button>
                 <!-- <button type="button" class="btn btn-info btn-sm" @click="">Tokens</button> -->
                 <button type="button" class="btn btn-info btn-sm" @click="deleteUser(u.username)">Delete</button>
                 </td>
