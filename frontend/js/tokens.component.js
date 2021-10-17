@@ -2,7 +2,8 @@ Vue.component('tokens', {
   data: function() {
     return {
         tokens: [],
-        selectedToken: ""
+        selectedToken: "",
+        newTokenIssuer: ""
     }
   },
   mounted: function() {
@@ -48,34 +49,83 @@ Vue.component('tokens', {
     selectToken(id) {
       var self = this ;
       self.selectedToken = id;
+    },
+    addToken() {
+      var self = this ;
+      console.log("Inside addToken():username,newTokenIssuer:",self.selectedUsername,self.newTokenIssuer);
+      if (self.newTokenIssuer == undefined || self.newTokenIssuer=="") {
+        console.log("Empty new token issuer -> ignore");
+        return;
+      }
+      if (self.selectedUsername == undefined || self.selectedUsername=="") {
+        console.log("Empty selectedUsername -> ignore");
+        return;
+      }
+      t = { issuer: self.newTokenIssuer};
+      console.log("Prepare to POST:", t)
+      fetch('/auth/token/'+self.selectedUsername, {
+        method: 'POST',
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "none"
+        },
+        body: JSON.stringify(t)
+      }).then(
+        function(response) {
+          if (response.status !== 201) {
+            console.log('Looks like there was a problem. Status Code: ' + response.status);
+            return;
+          } else {
+            self.tokens.push(t);
+          }
+      });
+      
     }
 },
   template: `
-          <div class="mb-4 table-responsive">
-            <h4 class="mb-3">{{selectedUsername}}</h4>
-            <table class="table table-striped table-sm table-condensed ">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Issuer</th>
-                  <th>URL</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="t in tokens" @click="selectToken(u.id)" :class="{'info' : isSelected(u.id)}">
-                  <td>{{u.id}}</td>
-                  <td>{{u.issuer}}</td>
-                  <td>{{u.url}}</td>
-                  <td>
-                  <button type="button" class="btn btn-info btn-sm" >Tokens</button>
-                  <!-- <button type="button" class="btn btn-info btn-sm" >Tokens</button> -->
-                  <button type="button" class="btn btn-info btn-sm" @click="deleteToken(username,u.id)">Delete</button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+        <div class="mb-4 table-responsive">
+          <div class="panel panel-default">
+            <div class="panel-heading">Token for {{selectedUsername}}</div>
+            <div class="panel-body">
+              <div class="col-md-4">
+                <div class="input-group">
+                  <span class="input-group-btn">
+                    <button class="btn btn-primary" type="button" @click="addToken">Generate new token for issuer:</button>
+                  </span>
+                  <input type="text" class="form-control" placeholder="Issuer..." v-model="newTokenIssuer">
+                </div><!-- /input-group -->
+              </div> <!-- class="col-md-4" -->
+              <div class="col-md-4">
+                <div class="input-group">
+                  <span class="input-group-btn">
+                    <button class="btn btn-primary" type="button" @click="importToken">Import token for:</button>
+                  </span>
+                  <input type="text" class="form-control" placeholder="Issuer..." v-model="newTokenIssuer">
+                </div><!-- /input-group -->
+              </div> <!-- class="col-md-4" -->
+              <table class="table table-striped table-sm table-condensed ">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Issuer</th>
+                    <th>URL</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="t in tokens" @click="selectToken(t.id)" :class="{'info' : isSelected(t.id)}">
+                    <td>{{t.id}}</td>
+                    <td>{{t.issuer}}</td>
+                    <td>{{t.url}}</td>
+                    <td>
+                    <button type="button" class="btn btn-info btn-sm" >Tokens</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
+        </div>
           `
 })
 

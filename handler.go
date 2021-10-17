@@ -182,7 +182,7 @@ func (env *Env) AddTokenHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	env.Db.AddToken(username, u.Issuer)
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusCreated)
 	fmt.Fprintf(w, "{}")
 }
 func (env *Env) GetTokenHandler(w http.ResponseWriter, r *http.Request) {
