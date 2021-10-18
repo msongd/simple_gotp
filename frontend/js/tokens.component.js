@@ -114,7 +114,49 @@ Vue.component('tokens', {
             self.newTokenUrl = "";
           }
       });
+    },
+    getModalId(id) {
+      return 'qrmodal-'+id;
+    },
+    showQRModal(id) {
+      //$('#qrmodal-'+id).modal('show');
+      var self = this ;
+      console.log("Inside showQRModal():username,id:",self.selectedUsername,id);
+      if (id == undefined || id == "") {
+        console.log("Empty token url id -> ignore");
+        return;
+      }
+      if (self.selectedUsername == undefined || self.selectedUsername=="") {
+        console.log("Empty selectedUsername -> ignore");
+        return;
+      }
+      let t={}
+      console.log("Prepare to POST:", t)
+      fetch('/auth/qr/'+self.selectedUsername+'/'+id, {
+        method: 'POST',
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "none"
+        },
+        body: JSON.stringify(t)
+      }).then(
+        function(response) {
+          if (response.status !== 200) {
+            console.log('Looks like there was a problem. Status Code: ' + response.status);
+            return;
+          }
+          response.json().then(function(data) {
+            //console.log(data);
+            //self.tokens = data;
+            let imgData = data.Img;
+            console.log(imgData);
+            $("#qrmodal-"+id+" img").attr("src",imgData);
+            ///////
+            $('#qrmodal-'+id).modal('show');
+          });
+      });
     }
+
 },
   template: `
         <div class="mb-4 table-responsive">
@@ -147,12 +189,29 @@ Vue.component('tokens', {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="t in tokens" @click="selectToken(t.id)" :class="{'info' : isSelected(t.id)}">
+                  <tr v-for="t in tokens" >
                     <td>{{t.id}}</td>
                     <td>{{t.issuer}}</td>
-                    <td>{{t.url}}</td>
+                    <td>
+                      {{t.url}}
+                      <div class="modal fade" :id="getModalId(t.id)" tabindex="-1" role="dialog">
+                        <div class="modal-dialog modal-sm" role="document">
+                          <div class="modal-content">
+                            <div class="modal-header">
+                              <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+                              <h4 class="modal-title">{{selectedUsername}}</h4>
+                            </div>
+                            <div class="modal-body">
+                            <img src=""/>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
                     <td>
                     <button type="button" class="btn btn-info btn-sm" >Delete</button>
+                    <button type="button" class="btn btn-info btn-sm" @click="showQRModal(t.id)">QR</button>
+                    <button type="button" class="btn btn-info btn-sm" >OTP</button>
                     </td>
                   </tr>
                 </tbody>

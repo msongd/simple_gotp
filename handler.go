@@ -1,13 +1,17 @@
 package main
 
 import (
+	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"image/png"
 	"log"
 	"net/http"
 	"net/url"
 
 	"github.com/gorilla/mux"
+	"github.com/pquerna/otp"
 )
 
 func (env *Env) VerifyHandler(w http.ResponseWriter, r *http.Request) {
@@ -256,10 +260,51 @@ func (env *Env) GetTokenHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(b)
 }
 func (env *Env) GetTokenQRHandler(w http.ResponseWriter, r *http.Request) {
-	//vars := mux.Vars(r)
+	vars := mux.Vars(r)
+	username, found := vars["user"]
+	if !found {
+		log.Println("Not found username in uri")
+		http.Error(w, "Error getting username in uri", http.StatusBadRequest)
+		return
+	}
+	tokenId, found := vars["token"]
+	if !found {
+		log.Println("Not found token id in uri")
+		http.Error(w, "Error getting token id in uri", http.StatusBadRequest)
+		return
+	}
+	token, err := env.Db.GetToken(username, tokenId)
+	if err != nil {
+		log.Println("Get token err:", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	key, err := otp.NewKeyFromURL(token.URL)
+	if err != nil {
+		log.Println("Create token obj err:", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	qrImg, err := key.Image(200, 200)
+	if err != nil {
+		log.Println("Create qr img err:", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	var buf bytes.Buffer
+	png.Encode(&buf, qrImg)
+	encoded := base64.StdEncoding.EncodeToString(buf.Bytes())
+	dataUrl := fmt.Sprintf("data:image/png;base64,%s", encoded)
+	returnedImage := &struct{ Img string }{Img: dataUrl}
+	b, err := json.Marshal(returnedImage)
+	if err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "In Home\n")
-
+	w.Write(b)
 }
 func (env *Env) GetOTPHandler(w http.ResponseWriter, r *http.Request) {
 	//vars := mux.Vars(r)
