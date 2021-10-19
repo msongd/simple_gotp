@@ -165,8 +165,12 @@ Vue.component('tokens', {
             $('#qrmodal-'+id).modal('show');
           });
       });
+    },
+    deleteToken(tokenId) {
+      var self = this ;
+      console.log("Request to delete token:username:",self.selectedUsername,":token:",tokenId);
+      self.$emit('delete-token',{username:self.selectedUsername,token:tokenId});
     }
-
 },
   template: `
         <div class="mb-4 table-responsive">
@@ -233,7 +237,7 @@ Vue.component('tokens', {
                       </div>
                     </td>
                     <td>
-                    <button type="button" class="btn btn-info btn-sm" >Delete</button>
+                    <button type="button" class="btn btn-info btn-sm" @click="deleteToken(t.id)">Delete</button>
                     <button type="button" class="btn btn-info btn-sm" @click="showQRModal(t.id)">QR</button>
                     <button type="button" class="btn btn-info btn-sm" >OTP</button>
                     </td>

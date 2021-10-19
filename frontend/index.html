@@ -39,7 +39,7 @@
       </nav>
       <div class="starter-template">
       <users v-on:select-user="onSelectUser"></users>
-      <tokens ref="tokens" v-bind:selected-username="selectedUsername"></tokens>
+      <tokens ref="tokens" v-bind:selected-username="selectedUsername" v-on:delete-token="onDeleteToken"></tokens>
       </div>
     </div><!-- /.container -->
 
@@ -54,6 +54,12 @@
             var self = this;
             self.selectedUsername = user;
             self.$refs.tokens.fetchTokens(user);
+          },
+          onDeleteToken: function(data) {
+            var self = this;
+            userToDelete = data.username;
+            tokenToDelete = data.token;
+            console.log("In MAIN():ondeletetoken:username:",userToDelete,":token:",tokenToDelete);
           }
         }
       })

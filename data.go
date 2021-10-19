@@ -47,7 +47,7 @@ func NewOtpConfig() *OtpConfig {
 	return &m
 }
 
-func (u *UserDetail) Cloned() *UserDetail {
+func (u *UserDetail) Cloned(nowTime time.Time) *UserDetail {
 	newUser := NewUser()
 	newUser.ActiveToken = u.ActiveToken
 	newUser.Username = u.Username
@@ -62,7 +62,7 @@ func (u *UserDetail) Cloned() *UserDetail {
 			newUser.Tokens[i].Issuer = k.Issuer()
 		}
 		if t.ID == u.ActiveToken {
-			nowTime := time.Now()
+			log.Println("Generate code for:user:", u.Username, ":time:", nowTime)
 			code, err := totp.GenerateCode(k.Secret(), nowTime)
 			if err != nil {
 				log.Println("Error getting code:", err)
@@ -78,7 +78,8 @@ func (cfg *OtpConfig) Get(username string) (*UserDetail, bool) {
 	cfg.Lock()
 	defer cfg.Unlock()
 	c, found := cfg.Users[username]
-	cloned := c.Cloned()
+	nowTime := time.Now()
+	cloned := c.Cloned(nowTime)
 	return cloned, found
 }
 
@@ -98,8 +99,9 @@ func (cfg *OtpConfig) GetAllUsers() []*UserDetail {
 	defer cfg.Unlock()
 	all := make([]*UserDetail, len(cfg.Users))
 	i := 0
+	nowTime := time.Now()
 	for _, v := range cfg.Users {
-		all[i] = v.Cloned()
+		all[i] = v.Cloned(nowTime)
 		i = i + 1
 	}
 	return all
