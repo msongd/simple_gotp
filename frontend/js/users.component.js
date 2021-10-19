@@ -104,6 +104,36 @@ Vue.component('users', {
             }
         });
       }
+    },
+    selectActiveToken(username,tokenId) {
+      var self = this ;
+      console.log("choosing active token", tokenId, "for user", self.selectedUser);
+      if (username == undefined || username=="") {
+        console.log("Empty username -> ignore");
+        return;
+      }
+      let t={ active_token: tokenId}
+      console.log("Prepare to POST:", t)
+      fetch('/auth/user/'+username, {
+        method: 'POST',
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "none"
+        },
+        body: JSON.stringify(t)
+      }).then(
+        function(response) {
+          if (response.status !== 200) {
+            console.log('Looks like there was a problem. Status Code: ' + response.status);
+            return;
+          }
+          response.json().then(function(data) {
+            console.log(data);
+            //self.tokens = data;
+            self.users[username].active_token = tokenId;
+          });
+      });
+
     }
 },
   template: `
@@ -124,16 +154,31 @@ Vue.component('users', {
               <tr>
                 <th>Username</th>
                 <th>Active token</th>
+                <th>Total</th>
+                <th>Code</th>
                 <th>Command</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="u in users" @click="selectUser(u.username)" :class="{'info' : isSelected(u.username)}">
+              <tr v-for="u in users" :class="{'info' : isSelected(u.username)}">
                 <td>{{u.username}}</td>
-                <td>{{u.active_token}}</td>
+                <td>
+                  <select v-model="u.active_token" v-on:change="selectActiveToken(u.username, u.active_token)">
+                    <option v-for="option in u.tokens" v-bind:value="option.id">
+                      {{ option.issuer }}
+                    </option>
+                  </select>
+                </td>
+                <td>
+                  {{u.total}}
+                </td>
+                <td>
+                  {{u.current_code}}
+                </td>
                 <td>
                 <!-- <button type="button" class="btn btn-info btn-sm" @click="">Tokens</button> -->
                 <button type="button" class="btn btn-info btn-sm" @click="deleteUser(u.username)">Delete</button>
+                <button type="button" class="btn btn-info btn-sm" @click="selectUser(u.username)">Detail</button>
                 </td>
               </tr>
             </tbody>

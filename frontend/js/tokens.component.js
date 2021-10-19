@@ -4,7 +4,8 @@ Vue.component('tokens', {
         tokens: [],
         selectedToken: "",
         newTokenIssuer: "",
-        newTokenUrl: ""
+        newTokenUrl: "",
+        messageErr:"",
     }
   },
   mounted: function() {
@@ -56,10 +57,12 @@ Vue.component('tokens', {
       console.log("Inside addToken():username,newTokenIssuer:",self.selectedUsername,self.newTokenIssuer);
       if (self.newTokenIssuer == undefined || self.newTokenIssuer=="") {
         console.log("Empty new token issuer -> ignore");
+        self.messageErr = "Empty issuer";
         return;
       }
       if (self.selectedUsername == undefined || self.selectedUsername=="") {
         console.log("Empty selectedUsername -> ignore");
+        self.messageErr = "No user selected";
         return;
       }
       t = { issuer: self.newTokenIssuer};
@@ -75,6 +78,7 @@ Vue.component('tokens', {
         function(response) {
           if (response.status !== 201) {
             console.log('Looks like there was a problem. Status Code: ' + response.status);
+            self.messageErr = "Request to server error";
             return;
           } else {
             self.fetchTokens(self.selectedUsername);
@@ -87,10 +91,12 @@ Vue.component('tokens', {
       console.log("Inside importToken():username,newTokenUrl:",self.selectedUsername,self.newTokenUrl);
       if (self.newTokenUrl == undefined || self.newTokenUrl=="") {
         console.log("Empty new token url -> ignore");
+        self.messageErr = "No token url input";
         return;
       }
       if (self.selectedUsername == undefined || self.selectedUsername=="") {
         console.log("Empty selectedUsername -> ignore");
+        self.messageErr = "No user selected";
         return;
       }
       var newU = new URL(self.newTokenUrl);
@@ -107,6 +113,7 @@ Vue.component('tokens', {
         function(response) {
           if (response.status !== 201) {
             console.log('Looks like there was a problem. Status Code: ' + response.status);
+            self.messageErr = "Request to server error";
             return;
           } else {
             //self.tokens.push(importedToken);
@@ -124,10 +131,12 @@ Vue.component('tokens', {
       console.log("Inside showQRModal():username,id:",self.selectedUsername,id);
       if (id == undefined || id == "") {
         console.log("Empty token url id -> ignore");
+        self.messageErr = "Emtpy token id";
         return;
       }
       if (self.selectedUsername == undefined || self.selectedUsername=="") {
         console.log("Empty selectedUsername -> ignore");
+        self.messageErr = "No user selected";
         return;
       }
       let t={}
@@ -143,6 +152,7 @@ Vue.component('tokens', {
         function(response) {
           if (response.status !== 200) {
             console.log('Looks like there was a problem. Status Code: ' + response.status);
+            self.messageErr = "Request to server error";
             return;
           }
           response.json().then(function(data) {
@@ -163,23 +173,37 @@ Vue.component('tokens', {
           <div class="panel panel-default">
             <div class="panel-heading">Token for {{selectedUsername}}</div>
             <div class="panel-body">
-              <div class="col-md-4">
-                <div class="input-group">
-                  <span class="input-group-btn">
-                    <button class="btn btn-primary" type="button" @click="addToken">Generate new token for issuer:</button>
-                  </span>
-                  <input type="text" class="form-control" placeholder="Issuer..." v-model="newTokenIssuer">
-                </div><!-- /input-group -->
-              </div> <!-- class="col-md-4" -->
-              <div class="col-md-4">
-                <div class="input-group">
-                  <span class="input-group-btn">
-                    <button class="btn btn-primary" type="button" @click="importToken">Import token from:</button>
-                  </span>
-                  <input type="text" class="form-control" placeholder="Token..." v-model="newTokenUrl">
-                </div><!-- /input-group -->
-              </div> <!-- class="col-md-4" -->
-              <table class="table table-striped table-sm table-condensed ">
+              <div class="row">
+                <div class="form-inline col-md-12">
+                  <!-- todo: protect token url by PIN 
+                  <div class="form-group">
+                    <label>PIN</label>
+                    <input type="text" class="form-control" placeholder="PIN">
+                  </div>
+                  -->
+                  <div class="form-group">
+                    <label>Issuer</label>
+                    <input type="text" class="form-control" placeholder="Issuer..." v-model="newTokenIssuer">
+                  </div>
+                  <button class="btn btn-primary" type="button" @click="addToken">Generate</button>
+                  <!-- todo: protect token url by PIN 
+                  <div class="form-group">
+                    <label>PIN</label>
+                    <input type="text" class="form-control" placeholder="PIN">
+                  </div>
+                  -->
+                  <div class="form-group">
+                    <label>Token Url</label>
+                    <input type="text" class="form-control" placeholder="Token..." v-model="newTokenUrl">
+                  </div>
+                  <button class="btn btn-primary" type="button" @click="importToken">Import</button>
+                </div>                
+              </div> <!-- div row -->
+              <div class="alert alert-danger alert-dismissible" role="alert" v-if="messageErr!=''">
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close" @click="messageErr=''"><span aria-hidden="true">&times;</span></button>
+                {{messageErr}}
+              </div>
+              <table class="table table-striped table-sm table-condensed " v-if="tokens && tokens.length>0">
                 <thead>
                   <tr>
                     <th>ID</th>

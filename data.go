@@ -10,6 +10,7 @@ import (
 	"os"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
@@ -25,6 +26,8 @@ type UserDetail struct {
 	Username    string        `json:"username"`
 	ActiveToken string        `json:"active_token"`
 	Tokens      []TokenDetail `json:"tokens"`
+	Total       int           `json:"total"`
+	CurrentCode string        `json:"current_code"`
 }
 
 type OtpConfig struct {
@@ -48,7 +51,26 @@ func (u *UserDetail) Cloned() *UserDetail {
 	newUser := NewUser()
 	newUser.ActiveToken = u.ActiveToken
 	newUser.Username = u.Username
+	newUser.Tokens = make([]TokenDetail, len(u.Tokens))
 	//copy(newUser.Tokens, u.Tokens)
+	for i, t := range u.Tokens {
+		newUser.Tokens[i].ID = t.ID
+		k, err := otp.NewKeyFromURL(t.URL)
+		if err != nil {
+			log.Println("Parsing url to token err:", err)
+		} else {
+			newUser.Tokens[i].Issuer = k.Issuer()
+		}
+		if t.ID == u.ActiveToken {
+			nowTime := time.Now()
+			code, err := totp.GenerateCode(k.Secret(), nowTime)
+			if err != nil {
+				log.Println("Error getting code:", err)
+			}
+			newUser.CurrentCode = code
+		}
+	}
+	newUser.Total = len(u.Tokens)
 	return newUser
 }
 
@@ -100,10 +122,7 @@ func (cfg *OtpConfig) HasUser(username string) bool {
 	cfg.Lock()
 	defer cfg.Unlock()
 	_, found := cfg.Users[username]
-	if !found {
-		return false
-	}
-	return true
+	return found
 }
 
 func (cfg *OtpConfig) GetAllTokens(username string) ([]TokenDetail, error) {
