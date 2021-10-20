@@ -368,4 +368,6 @@ func (env *Env) DeleteTokenHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println("Not remove token", tokenId, "for", username)
 		http.Error(w, "Token not found", http.StatusNotFound)
 	}
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "{}")
 }

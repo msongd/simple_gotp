@@ -1,4 +1,4 @@
-Vue.component('users', {
+Vue.component('list-users', {
   data: function() {
     return {
         users: [],
@@ -133,7 +133,54 @@ Vue.component('users', {
             self.users[username].active_token = tokenId;
           });
       });
+    },
+    removeTokenFromUser(userToDelete,tokenToDelete) {
+      var self = this ;
+      self.users = self.users.filter(function(anUser){
+        if (anUser.username != userToDelete) {
+          return anUser;
+        }
+        if (anUser.active_token == tokenToDelete)
+          anUser.active_token = ""
+        anUser.tokens = anUser.tokens.filter(function(aToken){
+          if (aToken.id != tokenToDelete)
+            return aToken;
+        });
+        return anUser;        
+      });
+    },
+    refreshUser(username) {
+      var self = this ;
+      var updatedUser ;
+      console.log("in component tokens:refreshUser:username:", self.selectedUser);
 
+      
+      fetch('/auth/user/'+username.username, {
+        method: 'GET',
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "none"
+        }
+      }).then(function(response) {
+        if (response.status !== 200) {
+          console.log('Looks like there was a problem. Status Code: ' + response.status);
+          return nil;
+        }
+        response.json().then(function(data) {
+          updatedUser = data;
+          console.log('xxxxxx');
+          //console.log(self.users);
+          for (let i = 0; i < self.users.length; i++) {
+            if (self.users[i].username == username.username) {
+              console.log("should update token list for user:", username.username);
+              console.log(data);
+              self.$set(self.users,i,data);
+            }
+          }
+        });
+      });
+      //self.users[0].username = "testtest";
+      //self.users[0].tokens = [{issuer:'issue1', id:"1"},{issuer:'issue2', id:"2"}];
     }
 },
   template: `
@@ -170,7 +217,7 @@ Vue.component('users', {
                   </select>
                 </td>
                 <td>
-                  {{u.total}}
+                  {{u.tokens.length}}
                 </td>
                 <td>
                   {{u.current_code}}

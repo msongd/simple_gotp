@@ -83,6 +83,7 @@ Vue.component('tokens', {
           } else {
             self.fetchTokens(self.selectedUsername);
             self.newTokenIssuer = "" ;
+            self.$emit('change-user',{username:self.selectedUsername});
           }
       });
     },
@@ -119,6 +120,7 @@ Vue.component('tokens', {
             //self.tokens.push(importedToken);
             self.fetchTokens(self.selectedUsername);
             self.newTokenUrl = "";
+            self.$emit('change-user',{username:self.selectedUsername});
           }
       });
     },
@@ -169,7 +171,43 @@ Vue.component('tokens', {
     deleteToken(tokenId) {
       var self = this ;
       console.log("Request to delete token:username:",self.selectedUsername,":token:",tokenId);
-      self.$emit('delete-token',{username:self.selectedUsername,token:tokenId});
+      //self.$emit('delete-token',{username:self.selectedUsername,token:tokenId});
+      
+      if (tokenId == undefined || tokenId == "") {
+        console.log("Empty token url id -> ignore");
+        self.messageErr = "Emtpy token id";
+        return;
+      }
+      if (self.selectedUsername == undefined || self.selectedUsername=="") {
+        console.log("Empty selectedUsername -> ignore");
+        self.messageErr = "No user selected";
+        return;
+      }
+      let t={}
+      console.log("Prepare to POST:", t)
+      fetch('/auth/token/'+self.selectedUsername+'/'+tokenId, {
+        method: 'DELETE',
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "none"
+        },
+        body: JSON.stringify(t)
+      }).then(
+        function(response) {
+          if (response.status !== 200) {
+            console.log('Looks like there was a problem. Status Code: ' + response.status);
+            self.messageErr = "Request to server error";
+            return;
+          }
+          response.json().then(function(data) {
+            //console.log(data);
+            self.tokens = self.tokens.filter(function(item) {
+              if (item.id != tokenId)
+                return item;
+            });
+            self.$emit('delete-token',{username:self.selectedUsername,token:tokenId});
+          });
+      });
     }
 },
   template: `
