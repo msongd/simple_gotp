@@ -1,12 +1,27 @@
 package main
 
 import (
+	"embed"
+	"io/fs"
 	"net/http"
+	"path"
 
 	"github.com/gorilla/mux"
 )
 
-func MakeRouter(env *Env, staticDir string) *mux.Router {
+// content is our static web server content.
+//go:embed frontend
+var staticContent embed.FS
+
+type myFS struct {
+	content embed.FS
+}
+
+func (c myFS) Open(name string) (fs.File, error) {
+	return c.content.Open(path.Join("frontend", name))
+}
+
+func MakeRouter(env *Env) *mux.Router {
 	r := mux.NewRouter()
 	// Add your routes as needed
 	r.HandleFunc("/public/verify", env.VerifyHandler).Methods("POST")
@@ -24,7 +39,9 @@ func MakeRouter(env *Env, staticDir string) *mux.Router {
 	r.HandleFunc("/auth/token/{user}/{token}", env.DeleteTokenHandler).Methods("DELETE")
 	r.HandleFunc("/auth/token/{user}", env.GetAllTokenHandler).Methods("GET")
 	r.HandleFunc("/auth/token/{user}", env.AddTokenHandler).Methods("POST")
-	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(staticDir))))
+	//r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(staticDir))))
+	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.FS(myFS{staticContent}))))
+
 	r.PathPrefix("/").HandlerFunc(env.CatchAllHandler)
 	return r
 }

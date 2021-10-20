@@ -59,7 +59,7 @@ func main() {
 	}
 	workingEnv.Db = db
 	defer workingEnv.Db.SaveToFile(GLOBAL_CFG.DataFile)
-	r := MakeRouter(workingEnv, GLOBAL_CFG.FrontendDir)
+	r := MakeRouter(workingEnv)
 	l := &lumberjack.Logger{
 		Filename:   fmt.Sprintf("%s/access.log", GLOBAL_CFG.LogDir),
 		MaxSize:    50, // megabytes
