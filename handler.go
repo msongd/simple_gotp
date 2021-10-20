@@ -312,6 +312,20 @@ func (env *Env) GetOTPHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "In Home\n")
 }
 
+func (env *Env) GetAllOTPHandler(w http.ResponseWriter, r *http.Request) {
+	allUserOTPs := env.Db.GetAllUserOTPs()
+	b, err := json.Marshal(allUserOTPs)
+	if err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	//fmt.Fprintf(w, "In Home\n")
+	w.Write(b)
+}
+
 func (env *Env) UpdateTokenHandler(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "Bad request", http.StatusBadRequest)
 	return

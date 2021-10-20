@@ -4,13 +4,21 @@ Vue.component('list-users', {
         users: [],
         selectedUser: "",
         showNew: false,
-        newUsername: ""
+        newUsername: "",
+        timer: ""
     }
   },
   mounted: function() {
     this.fetchUsers();
+    this.timer = setInterval(this.fetchUserOTPs, 30000);
   },
   methods: {
+    cancelAutoUpdate () {
+      clearInterval(this.timer);
+    },
+    beforeDestroy () {
+      this.cancelAutoUpdate();
+    },
     fetchUsers: function(event) {
       var self = this ;
       //console.log('inside fetchUsers()');
@@ -31,6 +39,40 @@ Vue.component('list-users', {
             response.json().then(function(data) {
               //console.log(data);
               self.users = data;
+            });
+          }
+        )
+        .catch(function(err) {
+          console.log('Fetch Error :-S', err);
+        }
+      );
+    },
+    fetchUserOTPs() {
+      var self = this ;
+      //console.log('inside fetchUsers()');
+      fetch('/auth/otp', {
+        method: 'GET',
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "none"
+        }
+      }).then(
+        function(response) {
+          //console.log('inside fetchUsers()-> response');
+          if (response.status !== 200) {
+              console.log('Looks like there was a problem. Status Code: ' + response.status);
+              return;
+            }
+            // Examine the text in the response
+            response.json().then(function(data) {
+              //console.log(data);
+              for (i=0;i<self.users.length;i++) {
+                for (j=0;j<data.length;j++) {
+                  if (self.users[i].username == data[j].username) {
+                    self.users[i].current_code = data[j].current_code;
+                  }
+                }
+              }
             });
           }
         )

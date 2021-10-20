@@ -184,7 +184,11 @@ Vue.component('tokens', {
         return;
       }
       let t={}
-      console.log("Prepare to POST:", t)
+      console.log("Prepare to POST:", t);
+      let isConfirm = confirm("Are you sure?");
+      if (!isConfirm) {
+        return;
+      }
       fetch('/auth/token/'+self.selectedUsername+'/'+tokenId, {
         method: 'DELETE',
         headers: {
@@ -282,6 +286,7 @@ Vue.component('tokens', {
                   </tr>
                 </tbody>
               </table>
+              <confirm ref="deleteConfirm" dlg="confirm-dialog" title="Confirm"></confirm>
             </div>
           </div>
         </div>

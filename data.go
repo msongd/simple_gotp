@@ -106,6 +106,9 @@ func (cfg *OtpConfig) GetAllUsers() []*UserDetail {
 	}
 	return all
 }
+func (cfg *OtpConfig) GetAllUserOTPs() []*UserDetail {
+	return cfg.GetAllUsers()
+}
 
 func (cfg *OtpConfig) AddUser(username string) (bool, error) {
 	cfg.Lock()

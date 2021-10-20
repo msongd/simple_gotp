@@ -17,6 +17,7 @@ func MakeRouter(env *Env, staticDir string) *mux.Router {
 	r.HandleFunc("/auth/user", env.AddUserHandler).Methods("POST")
 	r.HandleFunc("/auth/qr/{user}/{token}", env.GetTokenQRHandler).Methods("POST")
 	r.HandleFunc("/auth/otp/{user}/{token}", env.GetOTPHandler).Methods("GET")
+	r.HandleFunc("/auth/otp", env.GetAllOTPHandler).Methods("GET")
 	r.HandleFunc("/auth/token/{user}/import", env.ImportTokenHandler).Methods("POST")
 	//r.HandleFunc("/auth/token/{user}/{token}", env.GetTokenHandler).Methods("GET")
 	//r.HandleFunc("/auth/token/{user}/{token}", env.UpdateTokenHandler).Methods("POST")
