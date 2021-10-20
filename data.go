@@ -30,6 +30,11 @@ type UserDetail struct {
 	CurrentCode string        `json:"current_code"`
 }
 
+type OTPVerifyRequest struct {
+	Username string `json:"username"`
+	OTP      string `json:"otp"`
+}
+
 type OtpConfig struct {
 	sync.RWMutex
 	Users map[string]*UserDetail
@@ -81,6 +86,21 @@ func (cfg *OtpConfig) Get(username string) (*UserDetail, bool) {
 	nowTime := time.Now()
 	cloned := c.Cloned(nowTime)
 	return cloned, found
+}
+
+func (cfg *OtpConfig) GetActiveTokenURL(username string) (string, bool) {
+	cfg.Lock()
+	defer cfg.Unlock()
+	c, found := cfg.Users[username]
+	if !found {
+		return "", false
+	}
+	for _, t := range c.Tokens {
+		if c.ActiveToken == t.ID {
+			return t.URL, true
+		}
+	}
+	return "", false
 }
 
 func (cfg *OtpConfig) Remove(username string) bool {

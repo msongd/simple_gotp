@@ -12,12 +12,30 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/pquerna/otp"
+	"github.com/pquerna/otp/totp"
 )
 
 func (env *Env) VerifyHandler(w http.ResponseWriter, r *http.Request) {
-	//vars := mux.Vars(r)
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "In Verify\n")
+	o := &OTPVerifyRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&o); err != nil {
+		log.Println(err)
+		http.Error(w, "Error decoding response object", http.StatusBadRequest)
+		return
+	}
+	u, found := env.Db.GetActiveTokenURL(o.Username)
+	if !found {
+		log.Println("Not found active token for user:", o.Username)
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+	k, err := otp.NewKeyFromURL(u)
+	if err != nil {
+		log.Println("Invalid token url:", u)
+		http.Error(w, "Invalid token url", http.StatusInternalServerError)
+		return
+	}
+	valid := totp.Validate(o.OTP, k.Secret())
+	fmt.Fprintf(w, "{\"valid\":%t}", valid)
 }
 
 func (env *Env) CatchAllHandler(w http.ResponseWriter, r *http.Request) {
