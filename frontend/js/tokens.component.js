@@ -269,9 +269,9 @@ Vue.component('tokens', {
                           <div class="modal-content">
                             <div class="modal-header">
                               <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
-                              <h4 class="modal-title">{{selectedUsername}}</h4>
+                              <h4 class="modal-title">{{selectedUsername}} - {{t.issuer}}</h4>
                             </div>
-                            <div class="modal-body">
+                            <div class="modal-body" style="text-align:center">
                             <img src=""/>
                             </div>
                           </div>
@@ -279,9 +279,8 @@ Vue.component('tokens', {
                       </div>
                     </td>
                     <td>
-                    <button type="button" class="btn btn-info btn-sm" @click="deleteToken(t.id)">Delete</button>
                     <button type="button" class="btn btn-info btn-sm" @click="showQRModal(t.id)">QR</button>
-                    <button type="button" class="btn btn-info btn-sm" >OTP</button>
+                    <button type="button" class="btn btn-info btn-sm btn-danger" @click="deleteToken(t.id)"><span class="glyphicon glyphicon-trash" aria-hidden="true"></span></button>
                     </td>
                   </tr>
                 </tbody>

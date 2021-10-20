@@ -155,7 +155,7 @@ Vue.component('list-users', {
         return;
       }
       let t={ active_token: tokenId}
-      console.log("Prepare to POST:", t)
+      console.log("Prepare to POST active token:", t)
       fetch('/auth/user/'+username, {
         method: 'POST',
         headers: {
@@ -170,9 +170,17 @@ Vue.component('list-users', {
             return;
           }
           response.json().then(function(data) {
-            console.log(data);
+            //console.log(data);
             //self.tokens = data;
-            self.users[username].active_token = tokenId;
+            //self.users[username].active_token = tokenId;
+            //self.users[username].current_code = "";
+            for (i=0;i<self.users.length;i++) {
+              if (self.users[i].username == username) {
+                self.users[i].active_token = tokenId;
+                self.users[i].current_code = "";
+                break;
+              }
+            }
           });
       });
     },
@@ -250,7 +258,9 @@ Vue.component('list-users', {
             </thead>
             <tbody>
               <tr v-for="u in users" :class="{'info' : isSelected(u.username)}">
-                <td>{{u.username}}</td>
+                <td>
+                  <button type="button" class="btn btn-info btn-sm" @click="selectUser(u.username)"><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span></button><span style="padding-left:1em;">{{u.username}}</span>
+                </td>
                 <td>
                   <select v-model="u.active_token" v-on:change="selectActiveToken(u.username, u.active_token)">
                     <option v-for="option in u.tokens" v-bind:value="option.id">
@@ -266,8 +276,7 @@ Vue.component('list-users', {
                 </td>
                 <td>
                 <!-- <button type="button" class="btn btn-info btn-sm" @click="">Tokens</button> -->
-                <button type="button" class="btn btn-info btn-sm" @click="deleteUser(u.username)">Delete</button>
-                <button type="button" class="btn btn-info btn-sm" @click="selectUser(u.username)">Detail</button>
+                <button type="button" class="btn btn-info btn-sm btn-danger" @click="deleteUser(u.username)"><span class="glyphicon glyphicon-trash" aria-hidden="true"></span></button>
                 </td>
               </tr>
             </tbody>
