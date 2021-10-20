@@ -231,6 +231,45 @@ Vue.component('list-users', {
       });
       //self.users[0].username = "testtest";
       //self.users[0].tokens = [{issuer:'issue1', id:"1"},{issuer:'issue2', id:"2"}];
+    },
+    deleteUser(username) {
+      var self = this ;
+      console.log("Request to delete username:",username);
+      //self.$emit('delete-token',{username:self.selectedUsername,token:tokenId});
+      
+      if (username == undefined || username=="") {
+        console.log("Empty username -> ignore");
+        return;
+      }
+      let t={}
+      console.log("Prepare to DELETE:", t);
+      let isConfirm = confirm("Do you want to delete user "+ username+"? All belonging tokens will be deleted.");
+      if (!isConfirm) {
+        return;
+      }
+      fetch('/auth/user/'+username, {
+        method: 'DELETE',
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "none"
+        },
+        body: JSON.stringify(t)
+      }).then(
+        function(response) {
+          if (response.status !== 200) {
+            console.log('Looks like there was a problem. Status Code: ' + response.status);
+            return;
+          }
+          response.json().then(function(data) {            
+            self.selectedUser = "";
+            self.users = self.users.filter(function(item){
+              if (item.username != username) {
+                return item;
+              }
+              return null;
+            });
+          });
+      });
     }
 },
   template: `
@@ -272,7 +311,7 @@ Vue.component('list-users', {
                   {{u.tokens.length}}
                 </td>
                 <td>
-                  {{u.current_code}}
+                  <span style="height:16px"> {{u.current_code}} </span><img v-if="u.current_code!=''" src="img/circle.gif" style="height:16px">
                 </td>
                 <td>
                 <!-- <button type="button" class="btn btn-info btn-sm" @click="">Tokens</button> -->

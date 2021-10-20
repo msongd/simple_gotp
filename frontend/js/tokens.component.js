@@ -6,10 +6,12 @@ Vue.component('tokens', {
         newTokenIssuer: "",
         newTokenUrl: "",
         messageErr:"",
+        visible: false
     }
   },
   mounted: function() {
     var self = this;
+    console.log("when mounted:selectedUsername:", self.selectedUsername);
     this.fetchTokens(self.selectedUsername);
   },
   props: {selectedUsername: String},
@@ -36,6 +38,7 @@ Vue.component('tokens', {
             response.json().then(function(data) {
               console.log(data);
               self.tokens = data;
+              self.visible = true;
             });
           }
         )
@@ -215,7 +218,7 @@ Vue.component('tokens', {
     }
 },
   template: `
-        <div class="mb-4 table-responsive">
+        <div class="mb-4 table-responsive" :class="[visible?'show':'hide']" >
           <div class="panel panel-default">
             <div class="panel-heading">Token for {{selectedUsername}}</div>
             <div class="panel-body">
