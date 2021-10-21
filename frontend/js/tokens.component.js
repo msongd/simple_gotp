@@ -288,7 +288,6 @@ Vue.component('tokens', {
                   </tr>
                 </tbody>
               </table>
-              <confirm ref="deleteConfirm" dlg="confirm-dialog" title="Confirm"></confirm>
             </div>
           </div>
         </div>

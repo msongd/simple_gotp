@@ -68,7 +68,7 @@ Vue.component('list-users', {
               //console.log(data);
               for (i=0;i<self.users.length;i++) {
                 for (j=0;j<data.length;j++) {
-                  if (self.users[i].username == data[j].username) {
+                  if (self.users[i].username == data[j].username && self.users[i].hasOwnProperty("current_code")) {
                     self.users[i].current_code = data[j].current_code;
                   }
                 }
@@ -127,7 +127,7 @@ Vue.component('list-users', {
         console.log("Empty new user -> ignore");
       } else {
         u = { username: self.newUsername};
-        console.log("Prepare to POST:", u)
+        console.log("Add user prepare to POST:", u)
         fetch('/auth/user', {
           method: 'POST',
           headers: {
@@ -141,7 +141,7 @@ Vue.component('list-users', {
               console.log('Looks like there was a problem. Status Code: ' + response.status);
               return;
             } else {
-              self.users.push(u);
+              self.users.push({username: self.newUsername, current_code:"", active_token:"",tokens:[], total: 0});
               self.newUsername = "";
             }
         });
@@ -277,14 +277,15 @@ Vue.component('list-users', {
       <div class="panel panel-default">
         <div class="panel-heading">Users</div>
         <div class="panel-body">
-          <div class="col-md-4">
-            <div class="input-group">
-              <span class="input-group-btn">
-                <button class="btn btn-primary" type="button" @click="addUser">Add user</button>
-              </span>
+          <div class="row">
+          <div class="form-inline col-md-12">
+            <div class="form-group">
+              <label>Username</label>
               <input type="text" class="form-control" placeholder="New username..." v-model="newUsername">
-            </div><!-- /input-group -->
-          </div> <!-- class="col-md-4" -->
+            </div>
+            <button class="btn btn-primary" type="button" @click="addUser">Add</button>
+          </div>                
+          </div> <!-- div row -->
           <table class="table table-striped table-sm table-condensed ">
             <thead>
               <tr>

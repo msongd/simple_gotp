@@ -15,9 +15,11 @@ import (
 )
 
 var (
-	CONFIG_FILE = flag.String("f", "config.json", "Config file")
-	GLOBAL_CFG  = NewConfig()
-	WAIT        time.Duration
+	CONFIG_FILE   = flag.String("f", "config.json", "Config file")
+	DEBUG_FLAG    = flag.Bool("d", false, "Turn on more debug messages")
+	DUMP_CFG_ONLY = flag.Bool("t", false, "Dump config and exit")
+	GLOBAL_CFG    = NewConfig()
+	WAIT          time.Duration
 )
 
 type Env struct {
@@ -44,10 +46,18 @@ func globalInit() {
 		MaxAge:     28,    //days
 		Compress:   false, // disabled by default
 	})
+	if *DUMP_CFG_ONLY {
+		fmt.Printf("%+v\n", GLOBAL_CFG)
+		os.Exit(0)
+	}
 }
 func main() {
 	globalInit()
-	log.Println("Starting")
+	if *DEBUG_FLAG {
+		log.Println("Starting")
+		log.Printf("%+v\n", GLOBAL_CFG)
+	}
+
 	//var wait time.Duration
 	//
 	//flag.Parse()
@@ -103,25 +113,4 @@ func main() {
 	//workingEnv.Db.SaveToFile(GLOBAL_CFG.DataFile)
 	log.Println("Shutting down")
 	//os.Exit(0)
-}
-func test() {
-	cfg := NewOtpConfig()
-	cfg.AddToken("tungdm@pam", "pam")
-	cfg.AddToken("tungdm@pam", "pam")
-	cfg.AddToken("khanhtn@pam", "pam")
-	cfg.AddToken("duyhd@pam", "pam")
-	cfg.AddToken("khanhtn@pam", "pam")
-	cfg.SetActiveToken("khanhtn@pam", "2")
-	cfg.SetActiveToken("duyhd@pam", "3")
-	cfg.SetActiveToken("xxx", "0")
-	cfg.Dump()
-	found, a1 := cfg.GetActiveToken("khanhtn@pam")
-	fmt.Println(found, a1)
-	found, a2 := cfg.GetActiveToken("duyhd@pam")
-	fmt.Println(found, a2)
-	found, a3 := cfg.GetActiveToken("xx")
-	fmt.Println(found, a3)
-	cfg.RemoveToken("khanhtn@pam", "1")
-	cfg.AddToken("khanhtn@pam", "pam")
-	cfg.Dump()
 }

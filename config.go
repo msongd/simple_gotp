@@ -8,9 +8,11 @@ import (
 )
 
 type Config struct {
-	Listen   string `json:"listen"`
-	LogDir   string `json:"log_dir"`
-	DataFile string `json:"data_file"`
+	Listen              string `json:"listen"`
+	LogDir              string `json:"log_dir"`
+	DataFile            string `json:"data_file"`
+	FrontendDir         string `json:"frontend_dir"`
+	UseEmbeddedFrontend bool   `json:"use_embedded_frontend"`
 }
 
 func NewConfig() *Config {
