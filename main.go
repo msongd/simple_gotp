@@ -48,7 +48,8 @@ func globalInit() {
 		Compress:   false, // disabled by default
 	})
 	if GLOBAL_CFG.KeycloakCfg == nil || GLOBAL_CFG.KeycloakCfg.JwkUrl == "" {
-		log.Fatal("Empty JWT url")
+		log.Println("Empty JWT url")
+		GLOBAL_CFG.NoAuth = true
 	}
 	if *DUMP_CFG_ONLY {
 		fmt.Printf("%+v\n", GLOBAL_CFG)

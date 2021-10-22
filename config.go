@@ -14,6 +14,7 @@ type Config struct {
 	FrontendDir         string          `json:"frontend_dir"`
 	UseEmbeddedFrontend bool            `json:"use_embedded_frontend"`
 	KeycloakCfg         *KeycloakConfig `json:"keycloak_cfg"`
+	NoAuth              bool            `json:"-"`
 }
 
 type KeycloakConfig struct {

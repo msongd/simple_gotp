@@ -6,6 +6,11 @@ function sleep (time) {
 }
 
 function initKeycloak(app) {
+    if ((typeof keycloakConfig === 'undefined') || (!keycloakConfig.hasOwnProperty('url'))) {
+        // no config -> skip keycloak
+        createVueApp({});
+        return 
+    }
     var keycloak = new Keycloak(keycloakConfig);
     keycloak.init({
         enableLogging:true, 
@@ -34,12 +39,19 @@ function createVueApp(kc) {
         },
         mounted: function() {
           //initKeycloak(this);
-          this.authenticated = kc.authenticated;
-          this.tokenParsed = kc.tokenParsed;
+          if ('authenticated' in kc) {
+            this.authenticated = kc.authenticated;
+          }
+          if ('tokenParsed' in kc) {
+            this.tokenParsed = kc.tokenParsed;
+          }          
         },
         computed: {
           authenticatedUsername() {
-            console.log(this.tokenParsed.preferred_username);
+            //console.log(this.tokenParsed.preferred_username);
+            if (this.tokenParsed == '') {
+                return "Anonymous" ;
+            }
             return this.tokenParsed.preferred_username ;
           }
         },
