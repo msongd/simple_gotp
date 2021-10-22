@@ -403,3 +403,42 @@ func (env *Env) DeleteTokenHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "{}")
 }
+
+func (env *Env) ConfigHandler(w http.ResponseWriter, r *http.Request) {
+	var cfg string
+	if GLOBAL_CFG.KeycloakCfg == nil || GLOBAL_CFG.KeycloakCfg.AuthUrl == "" {
+		cfg = ""
+	} else {
+		cfgTemplate := `
+		var KC_AUTHENTICATED = false;
+		var KC = "";
+		function initKeycloak(app) {
+			var keycloak = new Keycloak(
+				{
+					url: '%s',
+					realm: '%s',
+					clientId: '%s'
+				}
+			);
+			keycloak.init({
+				enableLogging:true, 
+				onLoad: 'login-required'
+			}).then(function(authenticated) {
+				//alert(authenticated ? 'authenticated' : 'not authenticated');
+				//console.log(authenticated ? 'authenticated' : 'not authenticated');
+				app.authenticated = authenticated ;
+				app.tokenParsed = keycloak.tokenParsed ;
+				KC_AUTHENTICATED = authenticated ;
+				//keycloakParsed = keycloak.tokenParsed ;
+				KC = keycloak ;
+			}).catch(function() {
+				console.log('keycloak failed to initialize');
+			});
+		}
+		`
+		cfg = fmt.Sprintf(cfgTemplate, GLOBAL_CFG.KeycloakCfg.AuthUrl, GLOBAL_CFG.KeycloakCfg.Realm, GLOBAL_CFG.KeycloakCfg.ClientId)
+	}
+	w.Header().Set("Content-Type", "application/javascript")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "%s", cfg)
+}

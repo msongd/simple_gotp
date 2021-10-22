@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"sort"
 	"strconv"
 	"sync"
 	"time"
@@ -124,6 +125,10 @@ func (cfg *OtpConfig) GetAllUsers() []*UserDetail {
 		all[i] = v.Cloned(nowTime)
 		i = i + 1
 	}
+	sort.Slice(all, func(i, j int) bool {
+		return all[i].Username < all[j].Username
+	})
+
 	return all
 }
 func (cfg *OtpConfig) GetAllUserOTPs() []*UserDetail {
@@ -167,6 +172,7 @@ func (cfg *OtpConfig) GetAllTokens(username string) ([]TokenDetail, error) {
 			tokens[i].Issuer = k.Issuer()
 		}
 	}
+	sort.Slice(tokens, func(i, j int) bool { return tokens[i].ID < tokens[j].ID })
 	//copy(tokens, u.Tokens)
 	return tokens, nil
 }

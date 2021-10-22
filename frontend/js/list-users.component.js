@@ -26,7 +26,7 @@ Vue.component('list-users', {
         method: 'GET',
         headers: {
           "Content-Type": "application/json",
-          "Authorization": "none"
+          "Authorization": KC_AUTHENTICATED==''?"none":"Bearer "+KC.token
         }
       }).then(
         function(response) {
@@ -54,7 +54,7 @@ Vue.component('list-users', {
         method: 'GET',
         headers: {
           "Content-Type": "application/json",
-          "Authorization": "none"
+          "Authorization": KC_AUTHENTICATED==''?"none":"Bearer "+KC.token
         }
       }).then(
         function(response) {
@@ -88,7 +88,7 @@ Vue.component('list-users', {
         method: 'GET',
         headers: {
           "Content-Type": "application/json",
-          "Authorization": "none"
+          "Authorization": KC_AUTHENTICATED==''?"none":"Bearer "+KC.token
         }
       }).then(
         function(response) {
@@ -132,7 +132,7 @@ Vue.component('list-users', {
           method: 'POST',
           headers: {
             "Content-Type": "application/json",
-            "Authorization": "none"
+            "Authorization": KC_AUTHENTICATED==''?"none":"Bearer "+KC.token
           },
           body: JSON.stringify(u)
         }).then(
@@ -160,7 +160,7 @@ Vue.component('list-users', {
         method: 'POST',
         headers: {
           "Content-Type": "application/json",
-          "Authorization": "none"
+          "Authorization": KC_AUTHENTICATED==''?"none":"Bearer "+KC.token
         },
         body: JSON.stringify(t)
       }).then(
@@ -209,7 +209,7 @@ Vue.component('list-users', {
         method: 'GET',
         headers: {
           "Content-Type": "application/json",
-          "Authorization": "none"
+          "Authorization": KC_AUTHENTICATED==''?"none":"Bearer "+KC.token
         }
       }).then(function(response) {
         if (response.status !== 200) {
@@ -251,7 +251,7 @@ Vue.component('list-users', {
         method: 'DELETE',
         headers: {
           "Content-Type": "application/json",
-          "Authorization": "none"
+          "Authorization": KC_AUTHENTICATED==''?"none":"Bearer "+KC.token
         },
         body: JSON.stringify(t)
       }).then(

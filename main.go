@@ -70,6 +70,10 @@ func main() {
 	workingEnv.Db = db
 	defer workingEnv.Db.SaveToFile(GLOBAL_CFG.DataFile)
 	r := MakeRouter(workingEnv)
+	headersOk := handlers.AllowedHeaders([]string{"*"})
+	originsOk := handlers.AllowedOrigins([]string{"*"})
+	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS", "DELETE"})
+
 	l := &lumberjack.Logger{
 		Filename:   fmt.Sprintf("%s/access.log", GLOBAL_CFG.LogDir),
 		MaxSize:    50, // megabytes
@@ -83,7 +87,7 @@ func main() {
 		WriteTimeout: time.Second * 15,
 		ReadTimeout:  time.Second * 15,
 		IdleTimeout:  time.Second * 60,
-		Handler:      handlers.CombinedLoggingHandler(l, r), // Pass our instance of gorilla/mux in.
+		Handler:      handlers.CORS(headersOk, originsOk, methodsOk)(handlers.CombinedLoggingHandler(l, r)), // Pass our instance of gorilla/mux in.
 	}
 
 	// Run our server in a goroutine so that it doesn't block.

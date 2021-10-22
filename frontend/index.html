@@ -13,6 +13,8 @@
      <link href="css/custom.css" rel="stylesheet">
     <script src="js/jquery-3.6.0.min.js"></script>
     <script src="js/bootstrap.min.js"></script>
+    <script src="js/keycloak.js"></script>
+    <script src="js/config.js"></script>
     <script src="js/vue.js"></script>
     <script src="js/list-users.component.js"></script>
     <script src="js/tokens.component.js"></script>
@@ -34,7 +36,10 @@
             <ul class="nav navbar-nav">
               <li class="active"><a href="#">Home</a></li>
             </ul>
-          </div><!--/.nav-collapse -->
+            <ul class="nav navbar-nav navbar-right" v-if="isAuthenticated">
+              <li><a href="#">Welcome {{authenticatedUsername}}</a></li>
+            </ul>
+          </div><!--/.nav-collapse -->          
         </div>
       </nav>
       <div class="starter-template">
@@ -47,9 +52,23 @@
       var app = new Vue({
         el: '#app',
         data: {
-          selectedUsername:""
+          selectedUsername:"",
+          authenticated: false,
+          tokenParsed:''
+        },
+        mounted: function() {
+          initKeycloak(this);
+        },
+        computed: {
+          authenticatedUsername() {
+            console.log(this.tokenParsed.preferred_username);
+            return this.tokenParsed.preferred_username ;
+          }
         },
         methods: {
+          isAuthenticated() {
+            return authenticated;
+          },
           onSelectUser: function (user) {
             var self = this;
             self.selectedUsername = user;

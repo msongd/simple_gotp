@@ -3,3 +3,4 @@ bin/*
 log/*.log
 conf/*.json
 data/*.json
+temp/*

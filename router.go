@@ -39,6 +39,7 @@ func MakeRouter(env *Env) *mux.Router {
 	r.HandleFunc("/auth/token/{user}/{token}", env.DeleteTokenHandler).Methods("DELETE")
 	r.HandleFunc("/auth/token/{user}", env.GetAllTokenHandler).Methods("GET")
 	r.HandleFunc("/auth/token/{user}", env.AddTokenHandler).Methods("POST")
+	r.HandleFunc("/static/js/config.js", env.ConfigHandler).Methods("GET")
 	if GLOBAL_CFG.UseEmbeddedFrontend {
 		r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.FS(myFS{staticContent}))))
 	} else {

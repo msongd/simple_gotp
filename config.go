@@ -8,11 +8,18 @@ import (
 )
 
 type Config struct {
-	Listen              string `json:"listen"`
-	LogDir              string `json:"log_dir"`
-	DataFile            string `json:"data_file"`
-	FrontendDir         string `json:"frontend_dir"`
-	UseEmbeddedFrontend bool   `json:"use_embedded_frontend"`
+	Listen              string          `json:"listen"`
+	LogDir              string          `json:"log_dir"`
+	DataFile            string          `json:"data_file"`
+	FrontendDir         string          `json:"frontend_dir"`
+	UseEmbeddedFrontend bool            `json:"use_embedded_frontend"`
+	KeycloakCfg         *KeycloakConfig `json:"keycloak_cfg"`
+}
+
+type KeycloakConfig struct {
+	AuthUrl  string `json:"auth_url"`
+	Realm    string `json:"realm"`
+	ClientId string `json:"client_id"`
 }
 
 func NewConfig() *Config {
