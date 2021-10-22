@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/pquerna/otp"
@@ -46,6 +47,7 @@ func (env *Env) CatchAllHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (env *Env) GetAllUserHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("In GetAllUserHandler()")
 	allUsers := env.Db.GetAllUsers()
 	b, err := json.Marshal(allUsers)
 	if err != nil {
@@ -406,39 +408,88 @@ func (env *Env) DeleteTokenHandler(w http.ResponseWriter, r *http.Request) {
 
 func (env *Env) ConfigHandler(w http.ResponseWriter, r *http.Request) {
 	var cfg string
-	if GLOBAL_CFG.KeycloakCfg == nil || GLOBAL_CFG.KeycloakCfg.AuthUrl == "" {
+	if env.Cfg.KeycloakCfg == nil || env.Cfg.KeycloakCfg.AuthUrl == "" {
 		cfg = ""
 	} else {
-		cfgTemplate := `
-		var KC_AUTHENTICATED = false;
-		var KC = "";
-		function initKeycloak(app) {
-			var keycloak = new Keycloak(
-				{
-					url: '%s',
-					realm: '%s',
-					clientId: '%s'
-				}
-			);
-			keycloak.init({
-				enableLogging:true, 
-				onLoad: 'login-required'
-			}).then(function(authenticated) {
-				//alert(authenticated ? 'authenticated' : 'not authenticated');
-				//console.log(authenticated ? 'authenticated' : 'not authenticated');
-				app.authenticated = authenticated ;
-				app.tokenParsed = keycloak.tokenParsed ;
-				KC_AUTHENTICATED = authenticated ;
-				//keycloakParsed = keycloak.tokenParsed ;
-				KC = keycloak ;
-			}).catch(function() {
-				console.log('keycloak failed to initialize');
-			});
-		}
-		`
-		cfg = fmt.Sprintf(cfgTemplate, GLOBAL_CFG.KeycloakCfg.AuthUrl, GLOBAL_CFG.KeycloakCfg.Realm, GLOBAL_CFG.KeycloakCfg.ClientId)
+		/*
+			cfgTemplate1 := `
+			var KC_AUTHENTICATED = false;
+			var KC = "";
+			function initKeycloak(app) {
+				var keycloak = new Keycloak(
+					{
+						url: '%s',
+						realm: '%s',
+						clientId: '%s'
+					}
+				);
+				keycloak.init({
+					enableLogging:true,
+					onLoad: 'login-required'
+				}).then(function(authenticated) {
+					//alert(authenticated ? 'authenticated' : 'not authenticated');
+					//console.log(authenticated ? 'authenticated' : 'not authenticated');
+					app.authenticated = authenticated ;
+					app.tokenParsed = keycloak.tokenParsed ;
+					KC_AUTHENTICATED = authenticated ;
+					//keycloakParsed = keycloak.tokenParsed ;
+					KC = keycloak ;
+				}).catch(function() {
+					console.log('keycloak failed to initialize');
+				});
+			}
+			`*/
+		cfgTemplate2 := `var keycloakConfig = {
+			url: '%s',
+			realm: '%s',
+			clientId: '%s'
+		}`
+		cfg = fmt.Sprintf(cfgTemplate2, env.Cfg.KeycloakCfg.AuthUrl, env.Cfg.KeycloakCfg.Realm, env.Cfg.KeycloakCfg.ClientId)
 	}
 	w.Header().Set("Content-Type", "application/javascript")
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "%s", cfg)
+}
+
+func (env *Env) AuthenticationMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/public/verify" || strings.HasPrefix(r.URL.Path, "/static/") || r.URL.Path == "/favicon.ico" {
+			next.ServeHTTP(w, r)
+			return
+		}
+		tokenBearer := r.Header.Get("Authorization")
+		if tokenBearer == "" {
+			log.Println("Authorization header not found for url:", r.URL.String())
+			http.Error(w, "Not found", http.StatusNotFound)
+			return
+		}
+		tokens := strings.Split(tokenBearer, " ")
+		if len(tokens) != 2 && tokens[0] != "Bearer" {
+			log.Println("Bearer text not found: got:", tokenBearer, "for url:", r.URL.String())
+			http.Error(w, "Not found", http.StatusNotFound)
+			return
+		}
+		token := tokens[1]
+		_, err := VerifyJWTToken(token, env.Cfg.KeycloakCfg.JwkUrl)
+		if err != nil {
+			log.Println("Verify token err:", err, "for url:", r.URL.String())
+			http.Error(w, "Not found", http.StatusNotFound)
+			return
+		}
+		//claims := tok.Claims.(jwt.MapClaims)
+		//log.Println(claims)
+		next.ServeHTTP(w, r)
+		/*
+			token := r.Header.Get("X-Session-Token")
+
+			if user, found := amw.tokenUsers[token]; found {
+				// We found the token in our map
+				log.Printf("Authenticated user %s\n", user)
+				// Pass down the request to the next middleware (or final handler)
+				next.ServeHTTP(w, r)
+			} else {
+				// Write an error and stop the handler chain
+				http.Error(w, "Forbidden", http.StatusForbidden)
+			}*/
+	})
 }

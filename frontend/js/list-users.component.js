@@ -21,41 +21,42 @@ Vue.component('list-users', {
     },
     fetchUsers: function(event) {
       var self = this ;
+      var sleepTime = 10 ;
       //console.log('inside fetchUsers()');
-      fetch('/auth/user', {
-        method: 'GET',
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": KC_AUTHENTICATED==''?"none":"Bearer "+KC.token
-        }
-      }).then(
-        function(response) {
-          //console.log('inside fetchUsers()-> response');
-          if (response.status !== 200) {
-              console.log('Looks like there was a problem. Status Code: ' + response.status);
-              return;
+      if (KC.token == undefined || KC.token == '') {
+        sleepTime = 1000;
+      }
+      sleep(sleepTime).then(() => {
+        //// code      
+        fetch('/auth/user', {
+          method: 'GET',
+          headers: MakeHeader(self)
+        }).then(
+          function(response) {
+            //console.log('inside fetchUsers()-> response');
+            if (response.status !== 200) {
+                console.log('Looks like there was a problem. Status Code: ' + response.status);
+                return;
+              }
+              // Examine the text in the response
+              response.json().then(function(data) {
+                //console.log(data);
+                self.users = data;
+              });
             }
-            // Examine the text in the response
-            response.json().then(function(data) {
-              //console.log(data);
-              self.users = data;
-            });
+          )
+          .catch(function(err) {
+            console.log('Fetch Error :-S', err);
           }
-        )
-        .catch(function(err) {
-          console.log('Fetch Error :-S', err);
-        }
-      );
+        );
+      });
     },
     fetchUserOTPs() {
       var self = this ;
       //console.log('inside fetchUsers()');
       fetch('/auth/otp', {
         method: 'GET',
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": KC_AUTHENTICATED==''?"none":"Bearer "+KC.token
-        }
+        headers: MakeHeader(self)
       }).then(
         function(response) {
           //console.log('inside fetchUsers()-> response');
@@ -86,10 +87,7 @@ Vue.component('list-users', {
       //console.log('inside fetchUsers()');
       fetch('/auth/user', {
         method: 'GET',
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": KC_AUTHENTICATED==''?"none":"Bearer "+KC.token
-        }
+        headers: MakeHeader(self)
       }).then(
         function(response) {
           //console.log('inside fetchUsers()-> response');
@@ -130,10 +128,7 @@ Vue.component('list-users', {
         console.log("Add user prepare to POST:", u)
         fetch('/auth/user', {
           method: 'POST',
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": KC_AUTHENTICATED==''?"none":"Bearer "+KC.token
-          },
+          headers: MakeHeader(self),
           body: JSON.stringify(u)
         }).then(
           function(response) {
@@ -158,10 +153,7 @@ Vue.component('list-users', {
       console.log("Prepare to POST active token:", t)
       fetch('/auth/user/'+username, {
         method: 'POST',
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": KC_AUTHENTICATED==''?"none":"Bearer "+KC.token
-        },
+        headers: MakeHeader(self),
         body: JSON.stringify(t)
       }).then(
         function(response) {
@@ -207,10 +199,7 @@ Vue.component('list-users', {
       
       fetch('/auth/user/'+username.username, {
         method: 'GET',
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": KC_AUTHENTICATED==''?"none":"Bearer "+KC.token
-        }
+        headers: MakeHeader(self)
       }).then(function(response) {
         if (response.status !== 200) {
           console.log('Looks like there was a problem. Status Code: ' + response.status);
@@ -249,10 +238,7 @@ Vue.component('list-users', {
       }
       fetch('/auth/user/'+username, {
         method: 'DELETE',
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": KC_AUTHENTICATED==''?"none":"Bearer "+KC.token
-        },
+        headers: MakeHeader(self),
         body: JSON.stringify(t)
       }).then(
         function(response) {

@@ -23,10 +23,7 @@ Vue.component('tokens', {
       var fetchUrl = '/auth/token/'+username ;
       fetch(fetchUrl, {
         method: 'GET',
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "none"
-        }
+        headers: MakeHeader(self)
       }).then(
         function(response) {
           //console.log('inside fetchUsers()-> response');
@@ -72,10 +69,7 @@ Vue.component('tokens', {
       console.log("Prepare to POST:", t)
       fetch('/auth/token/'+self.selectedUsername, {
         method: 'POST',
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "none"
-        },
+        headers: MakeHeader(self),
         body: JSON.stringify(t)
       }).then(
         function(response) {
@@ -108,10 +102,7 @@ Vue.component('tokens', {
       console.log("Prepare to POST:", t)
       fetch('/auth/token/'+self.selectedUsername+'/import', {
         method: 'POST',
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "none"
-        },
+        headers: MakeHeader(self),
         body: JSON.stringify(t)
       }).then(
         function(response) {
@@ -148,10 +139,7 @@ Vue.component('tokens', {
       console.log("Prepare to POST:", t)
       fetch('/auth/qr/'+self.selectedUsername+'/'+id, {
         method: 'POST',
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "none"
-        },
+        headers: MakeHeader(self),
         body: JSON.stringify(t)
       }).then(
         function(response) {
@@ -194,10 +182,7 @@ Vue.component('tokens', {
       }
       fetch('/auth/token/'+self.selectedUsername+'/'+tokenId, {
         method: 'DELETE',
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "none"
-        },
+        headers: MakeHeader(self),
         body: JSON.stringify(t)
       }).then(
         function(response) {

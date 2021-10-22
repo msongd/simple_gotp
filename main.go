@@ -23,7 +23,8 @@ var (
 )
 
 type Env struct {
-	Db *OtpConfig
+	Db  *OtpConfig
+	Cfg *Config
 }
 
 func globalInit() {
@@ -46,6 +47,9 @@ func globalInit() {
 		MaxAge:     28,    //days
 		Compress:   false, // disabled by default
 	})
+	if GLOBAL_CFG.KeycloakCfg == nil || GLOBAL_CFG.KeycloakCfg.JwkUrl == "" {
+		log.Fatal("Empty JWT url")
+	}
 	if *DUMP_CFG_ONLY {
 		fmt.Printf("%+v\n", GLOBAL_CFG)
 		os.Exit(0)
@@ -68,6 +72,7 @@ func main() {
 		log.Fatal("Unable to load data file, err:", err)
 	}
 	workingEnv.Db = db
+	workingEnv.Cfg = GLOBAL_CFG
 	defer workingEnv.Db.SaveToFile(GLOBAL_CFG.DataFile)
 	r := MakeRouter(workingEnv)
 	headersOk := handlers.AllowedHeaders([]string{"*"})

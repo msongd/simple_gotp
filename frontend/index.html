@@ -11,13 +11,6 @@
     <link rel="stylesheet" href="css/bootstrap.min.css">
      <!-- Custom styles for this template -->
      <link href="css/custom.css" rel="stylesheet">
-    <script src="js/jquery-3.6.0.min.js"></script>
-    <script src="js/bootstrap.min.js"></script>
-    <script src="js/keycloak.js"></script>
-    <script src="js/config.js"></script>
-    <script src="js/vue.js"></script>
-    <script src="js/list-users.component.js"></script>
-    <script src="js/tokens.component.js"></script>
   </head>
   <body>
     <div class="container" id="app">
@@ -48,46 +41,13 @@
       </div>
     </div><!-- /.container -->
 
-    <script>
-      var app = new Vue({
-        el: '#app',
-        data: {
-          selectedUsername:"",
-          authenticated: false,
-          tokenParsed:''
-        },
-        mounted: function() {
-          initKeycloak(this);
-        },
-        computed: {
-          authenticatedUsername() {
-            console.log(this.tokenParsed.preferred_username);
-            return this.tokenParsed.preferred_username ;
-          }
-        },
-        methods: {
-          isAuthenticated() {
-            return authenticated;
-          },
-          onSelectUser: function (user) {
-            var self = this;
-            self.selectedUsername = user;
-            self.$refs.tokens.fetchTokens(user);
-          },
-          onDeleteToken: function(data) {
-            var self = this;
-            userToDelete = data.username;
-            tokenToDelete = data.token;
-            console.log("In MAIN():ondeletetoken:username:",userToDelete,":token:",tokenToDelete);
-            self.$refs.users.removeTokenFromUser(userToDelete,tokenToDelete);
-          },
-          onChangeUser: function(data) {
-            var self = this;
-            console.log("In MAIN():onchangeuser:username:",data);
-            self.$refs.users.refreshUser(data);
-          }
-        }
-      })
-    </script>
+    <script src="js/jquery-3.6.0.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <script src="js/vue.js"></script>
+    <script src="js/list-users.component.js"></script>
+    <script src="js/tokens.component.js"></script>
+    <script src="js/keycloak.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/main.js"></script>
   </body>
 </html>

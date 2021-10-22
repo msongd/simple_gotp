@@ -20,6 +20,7 @@ type KeycloakConfig struct {
 	AuthUrl  string `json:"auth_url"`
 	Realm    string `json:"realm"`
 	ClientId string `json:"client_id"`
+	JwkUrl   string `json:"jwk_url"`
 }
 
 func NewConfig() *Config {
