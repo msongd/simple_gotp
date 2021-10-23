@@ -16,6 +16,14 @@ import (
 	"github.com/pquerna/otp/totp"
 )
 
+func (env *Env) IsUserAllowAccess(username string) bool {
+	if !env.Cfg.NoAuth && !env.IsAdmin && env.Username != "" && env.Username != username {
+		// must auth, not admin, already logged, & access different user url
+		return false
+	}
+	return true
+}
+
 func (env *Env) VerifyHandler(w http.ResponseWriter, r *http.Request) {
 	o := &OTPVerifyRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&o); err != nil {
@@ -49,7 +57,20 @@ func (env *Env) CatchAllHandler(w http.ResponseWriter, r *http.Request) {
 
 func (env *Env) GetAllUserHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("In GetAllUserHandler()")
-	allUsers := env.Db.GetAllUsers()
+	var allUsers []*UserDetail
+	if !env.Cfg.NoAuth && !env.IsAdmin && env.Username != "" {
+		user, ok := env.Db.Get(env.Username)
+		if !ok {
+			log.Println("Get user detail err for user:", env.Username)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		allUsers = make([]*UserDetail, 1)
+		allUsers[0] = user
+	} else {
+		log.Println("Admin or noauth access, get all users")
+		allUsers = env.Db.GetAllUsers()
+	}
 	b, err := json.Marshal(allUsers)
 	if err != nil {
 		log.Println(err)
@@ -66,6 +87,11 @@ func (env *Env) AddUserHandler(w http.ResponseWriter, r *http.Request) {
 	//vars := mux.Vars(r)
 	//w.WriteHeader(http.StatusOK)
 	//fmt.Fprintf(w, "In Home\n")
+	if !env.Cfg.NoAuth && !env.IsAdmin {
+		log.Println("Regular user is not allow to add user:", env.Username)
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
 	u := NewUser()
 	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
 		log.Println(err)
@@ -98,6 +124,11 @@ func (env *Env) GetUserHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error getting username in uri", http.StatusBadRequest)
 		return
 	}
+	if !env.IsUserAllowAccess(username) {
+		log.Println("Logged user is not allow to get detail for user:", username)
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
 	u, found := env.Db.Get(username)
 	if !found {
 		log.Println("User not found:", username)
@@ -125,6 +156,11 @@ func (env *Env) DeleteUserHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error getting username in uri", http.StatusBadRequest)
 		return
 	}
+	if !env.Cfg.NoAuth && !env.IsAdmin {
+		log.Println("Regular user is not allow to delete user:", env.Username)
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
 	found = env.Db.Remove(username)
 	if !found {
 		log.Println("User not found:", username)
@@ -145,6 +181,12 @@ func (env *Env) UpdateUserHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error getting username in uri", http.StatusBadRequest)
 		return
 	}
+	if !env.IsUserAllowAccess(username) {
+		log.Println("Logged user is not allow to update for user:", username)
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+
 	u := NewUser()
 	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
 		log.Println(err)
@@ -180,6 +222,11 @@ func (env *Env) GetAllTokenHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error getting token", http.StatusBadRequest)
 		return
 	}
+	if !env.IsUserAllowAccess(username) {
+		log.Println("Logged user is not allow to get tokens for user:", username)
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
 	// mask all url
 	for i, _ := range tokens {
 		maskedUrl, err := url.Parse(tokens[i].URL)
@@ -213,6 +260,12 @@ func (env *Env) ImportTokenHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error getting username in uri", http.StatusBadRequest)
 		return
 	}
+	if !env.IsUserAllowAccess(username) {
+		log.Println("Logged user is not allow to import token for user:", username)
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+
 	u := &struct {
 		Url string
 	}{}
@@ -237,6 +290,12 @@ func (env *Env) AddTokenHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error getting username in uri", http.StatusBadRequest)
 		return
 	}
+	if !env.IsUserAllowAccess(username) {
+		log.Println("Logged user is not allow to add token for user:", username)
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+
 	u := &struct{ Issuer string }{}
 	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
 		log.Println(err)
@@ -264,6 +323,12 @@ func (env *Env) GetTokenHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error getting token id in uri", http.StatusBadRequest)
 		return
 	}
+	if !env.IsUserAllowAccess(username) {
+		log.Println("Logged user is not allow to get token detail for user:", username)
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+
 	token, _ := env.Db.GetToken(username, tokenId)
 	if token == nil {
 		log.Println("Not found token id")
@@ -292,6 +357,11 @@ func (env *Env) GetTokenQRHandler(w http.ResponseWriter, r *http.Request) {
 	if !found {
 		log.Println("Not found token id in uri")
 		http.Error(w, "Error getting token id in uri", http.StatusBadRequest)
+		return
+	}
+	if !env.IsUserAllowAccess(username) {
+		log.Println("Logged user is not allow to get token qr for user:", username)
+		http.Error(w, "Not found", http.StatusNotFound)
 		return
 	}
 	token, err := env.Db.GetToken(username, tokenId)
@@ -334,7 +404,21 @@ func (env *Env) GetOTPHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (env *Env) GetAllOTPHandler(w http.ResponseWriter, r *http.Request) {
-	allUserOTPs := env.Db.GetAllUserOTPs()
+	var allUserOTPs []*UserDetail
+	if !env.Cfg.NoAuth && !env.IsAdmin && env.Username != "" {
+		user, ok := env.Db.Get(env.Username)
+		if !ok {
+			log.Println("Get user detail err for user:", env.Username)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		allUserOTPs = make([]*UserDetail, 1)
+		allUserOTPs[0] = user
+	} else {
+		log.Println("Admin or noauth access, get all users")
+		allUserOTPs = env.Db.GetAllUserOTPs()
+	}
+
 	b, err := json.Marshal(allUserOTPs)
 	if err != nil {
 		log.Println(err)
@@ -348,8 +432,6 @@ func (env *Env) GetAllOTPHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (env *Env) UpdateTokenHandler(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "Bad request", http.StatusBadRequest)
-	return
 	vars := mux.Vars(r)
 	//w.WriteHeader(http.StatusOK)
 	//fmt.Fprintf(w, "In Home\n")
@@ -363,6 +445,11 @@ func (env *Env) UpdateTokenHandler(w http.ResponseWriter, r *http.Request) {
 	if !found {
 		log.Println("Not found token id in uri")
 		http.Error(w, "Error getting token id in uri", http.StatusBadRequest)
+		return
+	}
+	if !env.IsUserAllowAccess(username) {
+		log.Println("Logged user is not allow to update token for user:", username)
+		http.Error(w, "Not found", http.StatusNotFound)
 		return
 	}
 	u := &TokenDetail{}
@@ -398,6 +485,12 @@ func (env *Env) DeleteTokenHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error getting token id in uri", http.StatusBadRequest)
 		return
 	}
+	if !env.IsUserAllowAccess(username) {
+		log.Println("Logged user is not allow to get token qr for user:", username)
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+
 	ok, _ := env.Db.RemoveToken(username, tokenId)
 	if !ok {
 		log.Println("Not remove token", tokenId, "for", username)
@@ -454,6 +547,10 @@ func (env *Env) ConfigHandler(w http.ResponseWriter, r *http.Request) {
 
 func (env *Env) AuthenticationMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if env.Cfg.NoAuth {
+			next.ServeHTTP(w, r)
+			return
+		}
 		tokenBearer := r.Header.Get("Authorization")
 		if tokenBearer == "" {
 			log.Println("Authorization header not found for url:", r.URL.String())
@@ -485,6 +582,8 @@ func (env *Env) AuthenticationMiddleware(next http.Handler) http.Handler {
 			http.Error(w, "Not found", http.StatusNotFound)
 			return
 		}
+		env.Username = GetUsernameFromJwt(tok.Claims)
+		env.IsAdmin = IsAdministrator(tok.Claims, env.Cfg)
 		next.ServeHTTP(w, r)
 	})
 }

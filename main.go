@@ -23,8 +23,10 @@ var (
 )
 
 type Env struct {
-	Db  *OtpConfig
-	Cfg *Config
+	Db       *OtpConfig
+	Cfg      *Config
+	Username string
+	IsAdmin  bool `default:"false"`
 }
 
 func globalInit() {

@@ -174,3 +174,39 @@ func VerifyRealmRole(wantedRole string, claim jwt.Claims, cfg *Config) bool {
 	}
 	return false
 }
+func GetUsernameFromJwt(claim jwt.Claims) string {
+	c := claim.(jwt.MapClaims)
+	username, ok := c["preferred_username"].(string)
+	if !ok {
+		return ""
+	}
+	return username
+}
+
+func IsAdministrator(claim jwt.Claims, cfg *Config) bool {
+	c := claim.(jwt.MapClaims)
+	adminRole := cfg.KeycloakCfg.ClaimRoleAdmin
+	if adminRole == "" {
+		return false
+	}
+	realmAccess, ok := c["realm_access"].(map[string]interface{})
+	if !ok {
+		log.Println("Cannot access realm_access")
+		return false
+	}
+	roles, ok := realmAccess["roles"].([]string)
+	if !ok {
+		log.Println("Cannot access roles")
+		return false
+	}
+	if len(roles) == 0 {
+		log.Println("Empty role")
+		return false
+	}
+	for _, s := range roles {
+		if s == adminRole {
+			return true
+		}
+	}
+	return false
+}

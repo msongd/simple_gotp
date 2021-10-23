@@ -24,6 +24,7 @@ type KeycloakConfig struct {
 	JwkUrl         string `json:"jwk_url"`
 	ClaimIss       string `json:"claim_iss"`
 	ClaimRealmRole string `json:"claim_realm_role"`
+	ClaimRoleAdmin string `json:"claim_role_admin"`
 }
 
 func NewConfig() *Config {
