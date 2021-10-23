@@ -110,7 +110,12 @@ func validateToken(tokenStr string, jwk map[string]JWKKey) (*jwt.Token, error) {
 	if err != nil {
 		return token, err
 	}
-
+	claims := token.Claims.(jwt.MapClaims)
+	err = claims.Valid()
+	if err != nil {
+		log.Println("verify token claims err:", err)
+		return token, err
+	}
 	//claims := token.Claims.(jwt.MapClaims)
 
 	/*
@@ -129,5 +134,43 @@ func validateToken(tokenStr string, jwk map[string]JWKKey) (*jwt.Token, error) {
 	if token.Valid {
 		return token, nil
 	}
-	return token, err
+	return token, fmt.Errorf("Token is not valid")
+}
+
+func VerifyClaimISS(claim jwt.Claims, cfg *Config) bool {
+	c := claim.(jwt.MapClaims)
+	if cfg == nil || cfg.KeycloakCfg.ClaimIss == "" {
+		return true
+	}
+	if cfg.KeycloakCfg.ClaimIss == "" {
+		return true
+	}
+	return c.VerifyIssuer(cfg.KeycloakCfg.ClaimIss, true)
+}
+
+func VerifyRealmRole(wantedRole string, claim jwt.Claims, cfg *Config) bool {
+	if wantedRole == "" {
+		return true
+	}
+	c := claim.(jwt.MapClaims)
+	realmAccess, ok := c["realm_access"].(map[string]interface{})
+	if !ok {
+		log.Println("Cannot access realm_access")
+		return false
+	}
+	roles, ok := realmAccess["roles"].([]string)
+	if !ok {
+		log.Println("Cannot access roles")
+		return false
+	}
+	if len(roles) == 0 {
+		log.Println("Empty role")
+		return false
+	}
+	for _, s := range roles {
+		if s == wantedRole {
+			return true
+		}
+	}
+	return false
 }

@@ -54,6 +54,17 @@ Vue.component('list-users', {
     fetchUserOTPs() {
       var self = this ;
       //console.log('inside fetchUsers()');
+      if ('$keycloak' in self) {
+        self.$keycloak.updateToken(30).then(function(refreshed) {
+          if (refreshed) {
+              console.log('Token was successfully refreshed');
+          } else {
+              console.log('Token is still valid');
+          }
+        }).catch(function() {
+          console.log('Failed to refresh the token, or the session has expired');
+        });
+      }
       fetch('/auth/otp', {
         method: 'GET',
         headers: MakeHeader(self)
@@ -97,7 +108,7 @@ Vue.component('list-users', {
             }
             // Examine the text in the response
             response.json().then(function(data) {
-              console.log(data);
+              //console.log(data);
               self.users = data;
             });
           }
@@ -109,7 +120,7 @@ Vue.component('list-users', {
     },
     isSelected: function(id) {
       var self = this ;
-      console.log("isSelected:",id,"while:",self.selectedUser);
+      //console.log("isSelected:",id,"while:",self.selectedUser);
       return id == self.selectedUser ;
     },
     selectUser(id) {

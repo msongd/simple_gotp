@@ -43,6 +43,7 @@ func (env *Env) CatchAllHandler(w http.ResponseWriter, r *http.Request) {
 	//vars := mux.Vars(r)
 	//w.WriteHeader(http.StatusOK)
 	//fmt.Fprintf(w, "In Home\n")
+	log.Println("CatchAll:", r.RequestURI)
 	http.Redirect(w, r, "/static/index.html", http.StatusTemporaryRedirect)
 }
 
@@ -453,10 +454,6 @@ func (env *Env) ConfigHandler(w http.ResponseWriter, r *http.Request) {
 
 func (env *Env) AuthenticationMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/public/verify" || strings.HasPrefix(r.URL.Path, "/static/") || r.URL.Path == "/favicon.ico" {
-			next.ServeHTTP(w, r)
-			return
-		}
 		tokenBearer := r.Header.Get("Authorization")
 		if tokenBearer == "" {
 			log.Println("Authorization header not found for url:", r.URL.String())
@@ -470,26 +467,24 @@ func (env *Env) AuthenticationMiddleware(next http.Handler) http.Handler {
 			return
 		}
 		token := tokens[1]
-		_, err := VerifyJWTToken(token, env.Cfg.KeycloakCfg.JwkUrl)
+		tok, err := VerifyJWTToken(token, env.Cfg.KeycloakCfg.JwkUrl)
 		if err != nil {
 			log.Println("Verify token err:", err, "for url:", r.URL.String())
 			http.Error(w, "Not found", http.StatusNotFound)
 			return
 		}
-		//claims := tok.Claims.(jwt.MapClaims)
-		//log.Println(claims)
+		ok := VerifyClaimISS(tok.Claims, env.Cfg)
+		if !ok {
+			log.Println("Verify token issuer err for url:", r.URL.String())
+			http.Error(w, "Not found", http.StatusNotFound)
+			return
+		}
+		ok = VerifyRealmRole(env.Cfg.KeycloakCfg.ClaimRealmRole, tok.Claims, env.Cfg)
+		if !ok {
+			log.Println("Verify token role err for url:", r.URL.String())
+			http.Error(w, "Not found", http.StatusNotFound)
+			return
+		}
 		next.ServeHTTP(w, r)
-		/*
-			token := r.Header.Get("X-Session-Token")
-
-			if user, found := amw.tokenUsers[token]; found {
-				// We found the token in our map
-				log.Printf("Authenticated user %s\n", user)
-				// Pass down the request to the next middleware (or final handler)
-				next.ServeHTTP(w, r)
-			} else {
-				// Write an error and stop the handler chain
-				http.Error(w, "Forbidden", http.StatusForbidden)
-			}*/
 	})
 }
