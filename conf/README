@@ -1,6 +1,11 @@
 json config files here
 sample:
+
 {
   "listen":":8080",
-  "log_dir": "./log"
+  "log_dir": "./log",
+  "data_file": "data/data.json",
+  "frontend_dir": "./frontend",
+  "use_embedded_frontend": false,
+  "keycloak_cfg" : {}
 }
