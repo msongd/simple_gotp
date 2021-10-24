@@ -7,5 +7,13 @@ sample:
   "data_file": "data/data.json",
   "frontend_dir": "./frontend",
   "use_embedded_frontend": false,
-  "keycloak_cfg" : {}
+  "keycloak_cfg" : {
+    "auth_url" :"",
+	  "realm":"",
+	  "client_id": "",
+	  "jwk_url":"",
+	  "claim_iss":"",
+	  "claim_realm_role":"",
+	  "claim_role_admin":""
+  }
 }
