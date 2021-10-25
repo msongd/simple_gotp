@@ -9,6 +9,8 @@ import (
 
 type Config struct {
 	Listen              string          `json:"listen"`
+	SSLKeyFile          string          `json:"ssl_key"`
+	SSLCertFile         string          `json:"ssl_cert"`
 	LogDir              string          `json:"log_dir"`
 	DataFile            string          `json:"data_file"`
 	FrontendDir         string          `json:"frontend_dir"`
