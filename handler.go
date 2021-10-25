@@ -505,34 +505,6 @@ func (env *Env) ConfigHandler(w http.ResponseWriter, r *http.Request) {
 	if env.Cfg.KeycloakCfg == nil || env.Cfg.KeycloakCfg.AuthUrl == "" {
 		cfg = ""
 	} else {
-		/*
-			cfgTemplate1 := `
-			var KC_AUTHENTICATED = false;
-			var KC = "";
-			function initKeycloak(app) {
-				var keycloak = new Keycloak(
-					{
-						url: '%s',
-						realm: '%s',
-						clientId: '%s'
-					}
-				);
-				keycloak.init({
-					enableLogging:true,
-					onLoad: 'login-required'
-				}).then(function(authenticated) {
-					//alert(authenticated ? 'authenticated' : 'not authenticated');
-					//console.log(authenticated ? 'authenticated' : 'not authenticated');
-					app.authenticated = authenticated ;
-					app.tokenParsed = keycloak.tokenParsed ;
-					KC_AUTHENTICATED = authenticated ;
-					//keycloakParsed = keycloak.tokenParsed ;
-					KC = keycloak ;
-				}).catch(function() {
-					console.log('keycloak failed to initialize');
-				});
-			}
-			`*/
 		cfgTemplate2 := `var keycloakConfig = {
 			url: '%s',
 			realm: '%s',
