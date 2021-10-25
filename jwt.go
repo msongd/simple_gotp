@@ -148,7 +148,7 @@ func VerifyClaimISS(claim jwt.Claims, cfg *Config) bool {
 	return c.VerifyIssuer(cfg.KeycloakCfg.ClaimIss, true)
 }
 
-func VerifyRealmRole(wantedRole string, claim jwt.Claims, cfg *Config) bool {
+func VerifyRealmRole(wantedRole string, claim jwt.Claims, env *Env) bool {
 	if wantedRole == "" {
 		return true
 	}
@@ -158,7 +158,14 @@ func VerifyRealmRole(wantedRole string, claim jwt.Claims, cfg *Config) bool {
 		log.Println("Cannot access realm_access")
 		return false
 	}
-	roles, ok := realmAccess["roles"].([]string)
+	rolesInterface, ok := realmAccess["roles"].([]interface{})
+	//log.Printf("%+v\n", realmAccess)
+	//log.Printf("%+v\n", rolesInterface)
+	roles := make([]string, len(rolesInterface))
+	for i, item := range rolesInterface {
+		roles[i] = item.(string)
+	}
+	log.Printf("%+v\n", roles)
 	if !ok {
 		log.Println("Cannot access roles")
 		return false
@@ -167,6 +174,16 @@ func VerifyRealmRole(wantedRole string, claim jwt.Claims, cfg *Config) bool {
 		log.Println("Empty role")
 		return false
 	}
+	if env.Cfg.KeycloakCfg.ClaimRoleAdmin == "" {
+		env.IsAdmin = false
+	} else {
+		for _, s := range roles {
+			if s == env.Cfg.KeycloakCfg.ClaimRoleAdmin {
+				env.IsAdmin = true
+			}
+		}
+	}
+
 	for _, s := range roles {
 		if s == wantedRole {
 			return true

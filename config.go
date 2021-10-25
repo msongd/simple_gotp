@@ -23,6 +23,7 @@ type KeycloakConfig struct {
 	AuthUrl        string `json:"auth_url"`
 	Realm          string `json:"realm"`
 	ClientId       string `json:"client_id"`
+	Secret         string `json:"secret"`
 	JwkUrl         string `json:"jwk_url"`
 	ClaimIss       string `json:"claim_iss"`
 	ClaimRealmRole string `json:"claim_realm_role"`

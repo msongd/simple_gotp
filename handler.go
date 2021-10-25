@@ -62,7 +62,7 @@ func (env *Env) GetAllUserHandler(w http.ResponseWriter, r *http.Request) {
 		user, ok := env.Db.Get(env.Username)
 		if !ok {
 			log.Println("Get user detail err for user:", env.Username)
-			w.WriteHeader(http.StatusInternalServerError)
+			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 		allUsers = make([]*UserDetail, 1)
@@ -408,8 +408,8 @@ func (env *Env) GetAllOTPHandler(w http.ResponseWriter, r *http.Request) {
 	if !env.Cfg.NoAuth && !env.IsAdmin && env.Username != "" {
 		user, ok := env.Db.Get(env.Username)
 		if !ok {
-			log.Println("Get user detail err for user:", env.Username)
-			w.WriteHeader(http.StatusInternalServerError)
+			log.Println("No user:", env.Username)
+			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 		allUserOTPs = make([]*UserDetail, 1)
@@ -509,8 +509,9 @@ func (env *Env) ConfigHandler(w http.ResponseWriter, r *http.Request) {
 			url: '%s',
 			realm: '%s',
 			clientId: '%s'
-		}`
-		cfg = fmt.Sprintf(cfgTemplate2, env.Cfg.KeycloakCfg.AuthUrl, env.Cfg.KeycloakCfg.Realm, env.Cfg.KeycloakCfg.ClientId)
+		};
+		var ADMIN_ROLE = "%s";`
+		cfg = fmt.Sprintf(cfgTemplate2, env.Cfg.KeycloakCfg.AuthUrl, env.Cfg.KeycloakCfg.Realm, env.Cfg.KeycloakCfg.ClientId, env.Cfg.KeycloakCfg.ClaimRoleAdmin)
 	}
 	w.Header().Set("Content-Type", "application/javascript")
 	w.WriteHeader(http.StatusOK)
@@ -548,14 +549,14 @@ func (env *Env) AuthenticationMiddleware(next http.Handler) http.Handler {
 			http.Error(w, "Not found", http.StatusNotFound)
 			return
 		}
-		ok = VerifyRealmRole(env.Cfg.KeycloakCfg.ClaimRealmRole, tok.Claims, env.Cfg)
+		ok = VerifyRealmRole(env.Cfg.KeycloakCfg.ClaimRealmRole, tok.Claims, env)
 		if !ok {
 			log.Println("Verify token role err for url:", r.URL.String())
 			http.Error(w, "Not found", http.StatusNotFound)
 			return
 		}
 		env.Username = GetUsernameFromJwt(tok.Claims)
-		env.IsAdmin = IsAdministrator(tok.Claims, env.Cfg)
+		//env.IsAdmin = IsAdministrator(tok.Claims, env.Cfg)
 		next.ServeHTTP(w, r)
 	})
 }

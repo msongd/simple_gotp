@@ -8,6 +8,7 @@ Vue.component('list-users', {
         timer: ""
     }
   },
+  props: ['isAdmin'],
   mounted: function() {
     this.fetchUsers();
     this.timer = setInterval(this.fetchUserOTPs, 30000);
@@ -54,17 +55,6 @@ Vue.component('list-users', {
     fetchUserOTPs() {
       var self = this ;
       //console.log('inside fetchUsers()');
-      if ('$keycloak' in self) {
-        self.$keycloak.updateToken(30).then(function(refreshed) {
-          if (refreshed) {
-              console.log('Token was successfully refreshed');
-          } else {
-              console.log('Token is still valid');
-          }
-        }).catch(function() {
-          console.log('Failed to refresh the token, or the session has expired');
-        });
-      }
       fetch('/auth/otp', {
         method: 'GET',
         headers: MakeHeader(self)
@@ -274,7 +264,7 @@ Vue.component('list-users', {
       <div class="panel panel-default">
         <div class="panel-heading">Users</div>
         <div class="panel-body">
-          <div class="row">
+          <div class="row" v-if="isAdmin">
           <div class="form-inline col-md-12">
             <div class="form-group">
               <label>Username</label>

@@ -84,6 +84,9 @@ func (cfg *OtpConfig) Get(username string) (*UserDetail, bool) {
 	cfg.Lock()
 	defer cfg.Unlock()
 	c, found := cfg.Users[username]
+	if !found {
+		return nil, false
+	}
 	nowTime := time.Now()
 	cloned := c.Cloned(nowTime)
 	return cloned, found

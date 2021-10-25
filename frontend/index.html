@@ -36,7 +36,7 @@
         </div>
       </nav>
       <div class="starter-template">
-      <list-users v-on:select-user="onSelectUser" ref="users"></list-users>
+      <list-users v-on:select-user="onSelectUser" ref="users" v-bind:is-admin="isAdmin"></list-users>
       <tokens ref="tokens" v-bind:selected-username="selectedUsername" v-on:delete-token="onDeleteToken" v-on:change-user="onChangeUser"></tokens>
       </div>
     </div><!-- /.container -->

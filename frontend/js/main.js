@@ -12,20 +12,36 @@ function initKeycloak(app) {
         return 
     }
     var keycloak = new Keycloak(keycloakConfig);
+
+    keycloak.onAuthError = function() { alert("xxx");};
     keycloak.init({
-        enableLogging:true, 
+        enableLogging: true,
         onLoad: 'login-required'
     }).then(function(authenticated) {
-        //alert(authenticated ? 'authenticated' : 'not authenticated');
-        //console.log(authenticated ? 'authenticated' : 'not authenticated');
-        //app.authenticated = authenticated ;
-        //app.tokenParsed = keycloak.tokenParsed ;
+      if (!authenticated) {
+        window.location.reload();
+      } else {
+        //Vue.$log.info("Authenticated");
         KC_AUTHENTICATED = authenticated ;
         KC = keycloak ;
         createVueApp(keycloak);
         Vue.prototype.$keycloak = keycloak;
-    }).catch(function() {
-        console.log('keycloak failed to initialize');
+        //Token Refresh
+        setInterval(() => {
+          keycloak.updateToken(70).then((refreshed) => {
+            if (refreshed) {
+              console.log('Token refreshed' + refreshed);
+            } else {
+              console.log('Token not refreshed, valid for '
+                + Math.round(keycloak.tokenParsed.exp + keycloak.timeSkew - new Date().getTime() / 1000) + ' seconds');
+            }
+          }).catch(() => {
+            console.log('Failed to refresh token');
+          });
+        }, 6000)
+      }
+    }).catch(function(error) {
+        console.log('keycloak failed to initialize:', error);
     });
 }
 
@@ -36,6 +52,7 @@ function createVueApp(kc) {
           selectedUsername:"",
           authenticated: false,
           tokenParsed: '',
+          isAdmin: false
         },
         mounted: function() {
           //initKeycloak(this);
@@ -44,7 +61,12 @@ function createVueApp(kc) {
           }
           if ('tokenParsed' in kc) {
             this.tokenParsed = kc.tokenParsed;
-          }          
+          }
+          if (ADMIN_ROLE != "" && kc.tokenParsed.realm_access.roles.includes(ADMIN_ROLE)) {
+            this.isAdmin = true;
+          } else {
+            this.isAdmin = false;
+          }
         },
         computed: {
           authenticatedUsername() {
