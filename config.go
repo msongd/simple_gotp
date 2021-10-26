@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"io/ioutil"
 	"log"
@@ -17,6 +18,7 @@ type Config struct {
 	UseEmbeddedFrontend bool            `json:"use_embedded_frontend"`
 	KeycloakCfg         *KeycloakConfig `json:"keycloak_cfg"`
 	NoAuth              bool            `json:"-"`
+	TLSConfig           *tls.Config     `json:"-"`
 }
 
 type KeycloakConfig struct {

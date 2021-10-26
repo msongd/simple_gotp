@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -53,6 +54,23 @@ func globalInit() {
 		log.Println("Empty JWT url")
 		GLOBAL_CFG.NoAuth = true
 	}
+	if GLOBAL_CFG.SSLKeyFile != "" {
+		/*
+			// for client cert verify (mutual SSL)
+			err = GLOBAL_CFG.LoadTLS()
+			if err != nil {
+				log.Fatal("Unable to load certificates")
+			}
+		*/
+		_, err = ioutil.ReadFile(GLOBAL_CFG.SSLCertFile)
+		if err != nil {
+			log.Fatal("Unable to read cert file:", err)
+		}
+		_, err = ioutil.ReadFile(GLOBAL_CFG.SSLKeyFile)
+		if err != nil {
+			log.Fatal("Unable to read key file:", err)
+		}
+	}
 	if *DUMP_CFG_ONLY {
 		fmt.Printf("%+v\n", GLOBAL_CFG)
 		os.Exit(0)
@@ -97,11 +115,18 @@ func main() {
 		IdleTimeout:  time.Second * 60,
 		Handler:      handlers.CORS(headersOk, originsOk, methodsOk)(handlers.CombinedLoggingHandler(l, r)), // Pass our instance of gorilla/mux in.
 	}
-
+	/* for client ssl verification (mutual ssl)
+	if workingEnv.Cfg.SSLKeyFile != "" {
+		srv.TLSConfig = workingEnv.Cfg.TLSConfig
+	}*/
 	// Run our server in a goroutine so that it doesn't block.
 	go func() {
-		if err := srv.ListenAndServe(); err != nil {
-			log.Println(err)
+		if workingEnv.Cfg.SSLKeyFile != "" {
+			if err := srv.ListenAndServeTLS(workingEnv.Cfg.SSLCertFile, workingEnv.Cfg.SSLKeyFile); err != nil {
+				log.Println("Start SSL server err:", err)
+			}
+		} else if err := srv.ListenAndServe(); err != nil {
+			log.Println("Start server err:", err)
 		}
 	}()
 
