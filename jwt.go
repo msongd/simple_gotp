@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/rsa"
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
@@ -27,21 +28,35 @@ type JWKKey struct {
 	Use string
 }
 
-func getJWK(jwkURL string) map[string]JWKKey {
+func getJWK(jwkURL string, insecure bool) map[string]JWKKey {
 
 	jwk := &JWK{}
+	jwkMap := make(map[string]JWKKey)
 
-	getJSON(jwkURL, jwk)
+	err := getJSON(jwkURL, jwk, insecure)
+	if err != nil {
+		log.Println("getJWK err:", err)
+		return jwkMap
+	}
 
-	jwkMap := make(map[string]JWKKey, 0)
 	for _, jwk := range jwk.Keys {
 		jwkMap[jwk.Kid] = jwk
 	}
 	return jwkMap
 }
 
-func getJSON(url string, target interface{}) error {
-	var myClient = &http.Client{Timeout: 10 * time.Second}
+func getJSON(url string, target interface{}, insecure bool) error {
+	customTransport := http.DefaultTransport.(*http.Transport).Clone()
+
+	if insecure {
+		customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	}
+
+	var myClient = &http.Client{
+		Transport: customTransport,
+		Timeout:   10 * time.Second,
+	}
+
 	r, err := myClient.Get(url)
 	if err != nil {
 		return err
@@ -76,10 +91,9 @@ func convertKey(rawE, rawN string) *rsa.PublicKey {
 	return pubKey
 }
 
-func VerifyJWTToken(tokenStr string, jwkURL string) (*jwt.Token, error) {
-	jwk := getJWK(jwkURL)
-	//log.Printf("Public jwks: %v",jwk)
-
+func VerifyJWTToken(tokenStr string, jwkURL string, insecure bool) (*jwt.Token, error) {
+	jwk := getJWK(jwkURL, insecure)
+	//log.Printf("Public jwks: %v", jwk)
 	token, err := validateToken(tokenStr, jwk)
 	if err != nil || !token.Valid {
 		log.Println("Verify token err:", err)
@@ -116,25 +130,11 @@ func validateToken(tokenStr string, jwk map[string]JWKKey) (*jwt.Token, error) {
 		log.Println("verify token claims err:", err)
 		return token, err
 	}
-	//claims := token.Claims.(jwt.MapClaims)
 
-	/*
-		iss, ok := claims["iss"]
-		if !ok {
-			return token, fmt.Errorf("token does not contain issuer")
-		}
-			issStr := iss.(string)
-			if strings.Contains(issStr, "cognito-idp") {
-				err = validateAWSJwtClaims(claims, region, userPoolID)
-				if err != nil {
-					return token, err
-				}
-			}
-	*/
 	if token.Valid {
 		return token, nil
 	}
-	return token, fmt.Errorf("Token is not valid")
+	return token, fmt.Errorf("token is not valid")
 }
 
 func VerifyClaimISS(claim jwt.Claims, cfg *Config) bool {
@@ -148,48 +148,52 @@ func VerifyClaimISS(claim jwt.Claims, cfg *Config) bool {
 	return c.VerifyIssuer(cfg.KeycloakCfg.ClaimIss, true)
 }
 
-func VerifyRealmRole(wantedRole string, claim jwt.Claims, env *Env) bool {
+func VerifyRealmRole(wantedRole string, claim jwt.Claims, env *Env) (bool, bool) {
 	if wantedRole == "" {
-		return true
+		//
+		return false, false
 	}
 	c := claim.(jwt.MapClaims)
 	realmAccess, ok := c["realm_access"].(map[string]interface{})
 	if !ok {
 		log.Println("Cannot access realm_access")
-		return false
+		return false, false
 	}
-	rolesInterface, ok := realmAccess["roles"].([]interface{})
+	rolesList, ok := realmAccess["roles"].([]interface{})
 	//log.Printf("%+v\n", realmAccess)
 	//log.Printf("%+v\n", rolesInterface)
-	roles := make([]string, len(rolesInterface))
-	for i, item := range rolesInterface {
+	roles := make([]string, len(rolesList))
+	for i, item := range rolesList {
 		roles[i] = item.(string)
 	}
-	log.Printf("%+v\n", roles)
 	if !ok {
 		log.Println("Cannot access roles")
-		return false
+		return false, false
 	}
 	if len(roles) == 0 {
 		log.Println("Empty role")
-		return false
+		return false, false
 	}
+	hasRole := false
+	isAdmin := false
+	log.Printf("%+v\n", roles)
+	log.Println("ClaimRoleAdmin:", env.Cfg.KeycloakCfg.ClaimRoleAdmin)
+
 	if env.Cfg.KeycloakCfg.ClaimRoleAdmin == "" {
-		env.IsAdmin = false
+		isAdmin = false
 	} else {
 		for _, s := range roles {
+			log.Println("s:", s)
 			if s == env.Cfg.KeycloakCfg.ClaimRoleAdmin {
-				env.IsAdmin = true
+				isAdmin = true
+			}
+			if s == wantedRole {
+				hasRole = true
 			}
 		}
 	}
 
-	for _, s := range roles {
-		if s == wantedRole {
-			return true
-		}
-	}
-	return false
+	return hasRole, isAdmin
 }
 func GetUsernameFromJwt(claim jwt.Claims) string {
 	c := claim.(jwt.MapClaims)

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -16,8 +17,16 @@ import (
 	"github.com/pquerna/otp/totp"
 )
 
-func (env *Env) IsUserAllowAccess(username string) bool {
-	if !env.Cfg.NoAuth && !env.IsAdmin && env.Username != "" && env.Username != username {
+type AuthContext struct {
+	Username string
+	IsAdmin  bool
+}
+
+func (env *Env) IsUserAllowAccess(username string, r *http.Request) bool {
+	authUsername := r.Context().Value("Username").(string)
+	isAdmin := r.Context().Value("isAdmin").(bool)
+
+	if !env.Cfg.NoAuth && isAdmin && authUsername != "" && authUsername != username {
 		// must auth, not admin, already logged, & access different user url
 		return false
 	}
@@ -58,10 +67,13 @@ func (env *Env) CatchAllHandler(w http.ResponseWriter, r *http.Request) {
 func (env *Env) GetAllUserHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("In GetAllUserHandler()")
 	var allUsers []*UserDetail
-	if !env.Cfg.NoAuth && !env.IsAdmin && env.Username != "" {
-		user, ok := env.Db.Get(env.Username)
+	username := r.Context().Value("Username").(string)
+	isAdmin := r.Context().Value("isAdmin").(bool)
+	log.Printf("\n[ctx] u:%s a:%t", username, isAdmin)
+	if !env.Cfg.NoAuth && !isAdmin && username != "" {
+		user, ok := env.Db.Get(username)
 		if !ok {
-			log.Println("Get user detail err for user:", env.Username)
+			log.Println("Get user detail err for user:", username)
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
@@ -87,8 +99,11 @@ func (env *Env) AddUserHandler(w http.ResponseWriter, r *http.Request) {
 	//vars := mux.Vars(r)
 	//w.WriteHeader(http.StatusOK)
 	//fmt.Fprintf(w, "In Home\n")
-	if !env.Cfg.NoAuth && !env.IsAdmin {
-		log.Println("Regular user is not allow to add user:", env.Username)
+	username := r.Context().Value("Username").(string)
+	isAdmin := r.Context().Value("isAdmin").(bool)
+
+	if !env.Cfg.NoAuth && !isAdmin {
+		log.Println("Regular user is not allow to add user:", username)
 		http.Error(w, "Not found", http.StatusNotFound)
 		return
 	}
@@ -124,7 +139,7 @@ func (env *Env) GetUserHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error getting username in uri", http.StatusBadRequest)
 		return
 	}
-	if !env.IsUserAllowAccess(username) {
+	if !env.IsUserAllowAccess(username, r) {
 		log.Println("Logged user is not allow to get detail for user:", username)
 		http.Error(w, "Not found", http.StatusNotFound)
 		return
@@ -150,14 +165,17 @@ func (env *Env) DeleteUserHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	//w.WriteHeader(http.StatusOK)
 	//fmt.Fprintf(w, "In Home\n")
+	isAdmin := r.Context().Value("isAdmin").(bool)
+	authUsername := r.Context().Value("Username").(string)
+
 	username, found := vars["user"]
 	if !found {
 		log.Println("Not found username in uri")
 		http.Error(w, "Error getting username in uri", http.StatusBadRequest)
 		return
 	}
-	if !env.Cfg.NoAuth && !env.IsAdmin {
-		log.Println("Regular user is not allow to delete user:", env.Username)
+	if !env.Cfg.NoAuth && !isAdmin {
+		log.Println("Regular user is not allow to delete user:", authUsername)
 		http.Error(w, "Not found", http.StatusNotFound)
 		return
 	}
@@ -181,7 +199,7 @@ func (env *Env) UpdateUserHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error getting username in uri", http.StatusBadRequest)
 		return
 	}
-	if !env.IsUserAllowAccess(username) {
+	if !env.IsUserAllowAccess(username, r) {
 		log.Println("Logged user is not allow to update for user:", username)
 		http.Error(w, "Not found", http.StatusNotFound)
 		return
@@ -222,7 +240,7 @@ func (env *Env) GetAllTokenHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error getting token", http.StatusBadRequest)
 		return
 	}
-	if !env.IsUserAllowAccess(username) {
+	if !env.IsUserAllowAccess(username, r) {
 		log.Println("Logged user is not allow to get tokens for user:", username)
 		http.Error(w, "Not found", http.StatusNotFound)
 		return
@@ -260,7 +278,7 @@ func (env *Env) ImportTokenHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error getting username in uri", http.StatusBadRequest)
 		return
 	}
-	if !env.IsUserAllowAccess(username) {
+	if !env.IsUserAllowAccess(username, r) {
 		log.Println("Logged user is not allow to import token for user:", username)
 		http.Error(w, "Not found", http.StatusNotFound)
 		return
@@ -290,7 +308,7 @@ func (env *Env) AddTokenHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error getting username in uri", http.StatusBadRequest)
 		return
 	}
-	if !env.IsUserAllowAccess(username) {
+	if !env.IsUserAllowAccess(username, r) {
 		log.Println("Logged user is not allow to add token for user:", username)
 		http.Error(w, "Not found", http.StatusNotFound)
 		return
@@ -323,7 +341,7 @@ func (env *Env) GetTokenHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error getting token id in uri", http.StatusBadRequest)
 		return
 	}
-	if !env.IsUserAllowAccess(username) {
+	if !env.IsUserAllowAccess(username, r) {
 		log.Println("Logged user is not allow to get token detail for user:", username)
 		http.Error(w, "Not found", http.StatusNotFound)
 		return
@@ -359,7 +377,7 @@ func (env *Env) GetTokenQRHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error getting token id in uri", http.StatusBadRequest)
 		return
 	}
-	if !env.IsUserAllowAccess(username) {
+	if !env.IsUserAllowAccess(username, r) {
 		log.Println("Logged user is not allow to get token qr for user:", username)
 		http.Error(w, "Not found", http.StatusNotFound)
 		return
@@ -405,10 +423,13 @@ func (env *Env) GetOTPHandler(w http.ResponseWriter, r *http.Request) {
 
 func (env *Env) GetAllOTPHandler(w http.ResponseWriter, r *http.Request) {
 	var allUserOTPs []*UserDetail
-	if !env.Cfg.NoAuth && !env.IsAdmin && env.Username != "" {
-		user, ok := env.Db.Get(env.Username)
+	username := r.Context().Value("Username").(string)
+	isAdmin := r.Context().Value("isAdmin").(bool)
+
+	if !env.Cfg.NoAuth && !isAdmin && username != "" {
+		user, ok := env.Db.Get(username)
 		if !ok {
-			log.Println("No user:", env.Username)
+			log.Println("No user:", username)
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
@@ -447,7 +468,7 @@ func (env *Env) UpdateTokenHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error getting token id in uri", http.StatusBadRequest)
 		return
 	}
-	if !env.IsUserAllowAccess(username) {
+	if !env.IsUserAllowAccess(username, r) {
 		log.Println("Logged user is not allow to update token for user:", username)
 		http.Error(w, "Not found", http.StatusNotFound)
 		return
@@ -485,7 +506,7 @@ func (env *Env) DeleteTokenHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error getting token id in uri", http.StatusBadRequest)
 		return
 	}
-	if !env.IsUserAllowAccess(username) {
+	if !env.IsUserAllowAccess(username, r) {
 		log.Println("Logged user is not allow to get token qr for user:", username)
 		http.Error(w, "Not found", http.StatusNotFound)
 		return
@@ -537,7 +558,7 @@ func (env *Env) AuthenticationMiddleware(next http.Handler) http.Handler {
 			return
 		}
 		token := tokens[1]
-		tok, err := VerifyJWTToken(token, env.Cfg.KeycloakCfg.JwkUrl)
+		tok, err := VerifyJWTToken(token, env.Cfg.KeycloakCfg.JwkUrl, env.Cfg.KeycloakCfg.JwkUrlInsecure)
 		if err != nil {
 			log.Println("Verify token err:", err, "for url:", r.URL.String())
 			http.Error(w, "Not found", http.StatusNotFound)
@@ -549,14 +570,17 @@ func (env *Env) AuthenticationMiddleware(next http.Handler) http.Handler {
 			http.Error(w, "Not found", http.StatusNotFound)
 			return
 		}
-		ok = VerifyRealmRole(env.Cfg.KeycloakCfg.ClaimRealmRole, tok.Claims, env)
+		ok, isAdmin := VerifyRealmRole(env.Cfg.KeycloakCfg.ClaimRealmRole, tok.Claims, env)
 		if !ok {
 			log.Println("Verify token role err for url:", r.URL.String())
 			http.Error(w, "Not found", http.StatusNotFound)
 			return
 		}
-		env.Username = GetUsernameFromJwt(tok.Claims)
+		username := GetUsernameFromJwt(tok.Claims)
+		ctx := context.WithValue(r.Context(), "Username", username)
+		ctx = context.WithValue(ctx, "isAdmin", isAdmin)
+		//env.Username = GetUsernameFromJwt(tok.Claims)
 		//env.IsAdmin = IsAdministrator(tok.Claims, env.Cfg)
-		next.ServeHTTP(w, r)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
