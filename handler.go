@@ -17,14 +17,21 @@ import (
 	"github.com/pquerna/otp/totp"
 )
 
+type ContextKey string
+
+const (
+	UsernameContextKey ContextKey = "Username"
+	IsAdminContextKey  ContextKey = "isAdmin"
+)
+
 type AuthContext struct {
 	Username string
 	IsAdmin  bool
 }
 
 func (env *Env) IsUserAllowAccess(username string, r *http.Request) bool {
-	authUsername := r.Context().Value("Username").(string)
-	isAdmin := r.Context().Value("isAdmin").(bool)
+	authUsername := r.Context().Value(UsernameContextKey).(string)
+	isAdmin := r.Context().Value(IsAdminContextKey).(bool)
 
 	if !env.Cfg.NoAuth && isAdmin && authUsername != "" && authUsername != username {
 		// must auth, not admin, already logged, & access different user url
@@ -67,8 +74,8 @@ func (env *Env) CatchAllHandler(w http.ResponseWriter, r *http.Request) {
 func (env *Env) GetAllUserHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("In GetAllUserHandler()")
 	var allUsers []*UserDetail
-	username := r.Context().Value("Username").(string)
-	isAdmin := r.Context().Value("isAdmin").(bool)
+	username := r.Context().Value(UsernameContextKey).(string)
+	isAdmin := r.Context().Value(IsAdminContextKey).(bool)
 	log.Printf("\n[ctx] u:%s a:%t", username, isAdmin)
 	if !env.Cfg.NoAuth && !isAdmin && username != "" {
 		user, ok := env.Db.Get(username)
@@ -99,8 +106,8 @@ func (env *Env) AddUserHandler(w http.ResponseWriter, r *http.Request) {
 	//vars := mux.Vars(r)
 	//w.WriteHeader(http.StatusOK)
 	//fmt.Fprintf(w, "In Home\n")
-	username := r.Context().Value("Username").(string)
-	isAdmin := r.Context().Value("isAdmin").(bool)
+	username := r.Context().Value(UsernameContextKey).(string)
+	isAdmin := r.Context().Value(IsAdminContextKey).(bool)
 
 	if !env.Cfg.NoAuth && !isAdmin {
 		log.Println("Regular user is not allow to add user:", username)
@@ -165,8 +172,8 @@ func (env *Env) DeleteUserHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	//w.WriteHeader(http.StatusOK)
 	//fmt.Fprintf(w, "In Home\n")
-	isAdmin := r.Context().Value("isAdmin").(bool)
-	authUsername := r.Context().Value("Username").(string)
+	isAdmin := r.Context().Value(IsAdminContextKey).(bool)
+	authUsername := r.Context().Value(UsernameContextKey).(string)
 
 	username, found := vars["user"]
 	if !found {
@@ -246,7 +253,7 @@ func (env *Env) GetAllTokenHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// mask all url
-	for i, _ := range tokens {
+	for i := 0; i < len(tokens); i++ {
 		maskedUrl, err := url.Parse(tokens[i].URL)
 		if err != nil {
 			log.Println("Parsing url err:", err)
@@ -423,8 +430,8 @@ func (env *Env) GetOTPHandler(w http.ResponseWriter, r *http.Request) {
 
 func (env *Env) GetAllOTPHandler(w http.ResponseWriter, r *http.Request) {
 	var allUserOTPs []*UserDetail
-	username := r.Context().Value("Username").(string)
-	isAdmin := r.Context().Value("isAdmin").(bool)
+	username := r.Context().Value(UsernameContextKey).(string)
+	isAdmin := r.Context().Value(IsAdminContextKey).(bool)
 
 	if !env.Cfg.NoAuth && !isAdmin && username != "" {
 		user, ok := env.Db.Get(username)
@@ -577,8 +584,8 @@ func (env *Env) AuthenticationMiddleware(next http.Handler) http.Handler {
 			return
 		}
 		username := GetUsernameFromJwt(tok.Claims)
-		ctx := context.WithValue(r.Context(), "Username", username)
-		ctx = context.WithValue(ctx, "isAdmin", isAdmin)
+		ctx := context.WithValue(r.Context(), UsernameContextKey, username)
+		ctx = context.WithValue(ctx, IsAdminContextKey, isAdmin)
 		//env.Username = GetUsernameFromJwt(tok.Claims)
 		//env.IsAdmin = IsAdministrator(tok.Claims, env.Cfg)
 		next.ServeHTTP(w, r.WithContext(ctx))
