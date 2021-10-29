@@ -31,6 +31,8 @@ func MakeRouter(env *Env) *mux.Router {
 
 	authRoute := r.PathPrefix("/auth").Subrouter()
 	authRoute.Use(env.AuthenticationMiddleware)
+	authRoute.HandleFunc("/user/{user}/alias/{alias}", env.RemoveAliasHandler).Methods("DELETE")
+	authRoute.HandleFunc("/user/{user}/alias", env.AddAliasHandler).Methods("POST")
 	authRoute.HandleFunc("/user/{user}", env.GetUserHandler).Methods("GET")
 	authRoute.HandleFunc("/user/{user}", env.DeleteUserHandler).Methods("DELETE")
 	authRoute.HandleFunc("/user/{user}", env.UpdateUserHandler).Methods("POST")

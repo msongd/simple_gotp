@@ -137,7 +137,7 @@ Vue.component('list-users', {
               console.log('Looks like there was a problem. Status Code: ' + response.status);
               return;
             } else {
-              self.users.push({username: self.newUsername, current_code:"", active_token:"",tokens:[], total: 0});
+              self.users.push({username: self.newUsername, current_code:"", active_token:"",tokens:[], total: 0, aliases: []});
               self.newUsername = "";
             }
         });
@@ -257,6 +257,82 @@ Vue.component('list-users', {
             });
           });
       });
+    },
+    removeAlias(username, alias) {
+      var self = this ;
+      console.log("Inside RemoveAlias:",username,":",alias);
+      let fetchUrl = "/auth/user/"+username+"/alias/"+alias;
+      fetch(fetchUrl, {
+        method: 'DELETE',
+        headers: MakeHeader(self)
+      }).then(
+        function(response) {
+          //console.log('inside fetchUsers()-> response');
+          if (response.status !== 200) {
+              console.log('Looks like there was a problem. Status Code: ' + response.status);
+              return;
+            }
+            // Examine the text in the response
+            response.json().then(function(data) {
+              self.users = self.users.filter(function(item){
+                if (item.username != username) {
+                  return item;
+                }
+                item.aliases = item.aliases.filter(function(a){
+                  if (alias!=a){
+                    return a;
+                  }
+                  return null;
+                });
+                return item;
+              });    
+            });
+          }
+        )
+        .catch(function(err) {
+          console.log('Fetch Error :-S', err);
+        }
+      );
+    },
+    addAlias(username) {
+      var self = this ;
+      console.log("Inside AddAlias:",username);
+      var alias = prompt("Please enter new alias", "" + username + "_0");
+    
+      if (alias != null) {
+        console.log("Username:", username,":alias:", alias);
+        let a = {};
+        a.alias = alias;
+        let fetchUrl = "/auth/user/"+username+"/alias";
+        fetch(fetchUrl, {
+          method: 'POST',
+          headers: MakeHeader(self),
+          body: JSON.stringify(a)
+        }).then(
+          function(response) {
+            //console.log('inside fetchUsers()-> response');
+            if (response.status !== 200) {
+                console.log('Looks like there was a problem. Status Code: ' + response.status);
+                return;
+              }
+              // Examine the text in the response
+              response.json().then(function(data) {
+                console.log(data);
+                self.users = self.users.filter(function(item){
+                  if (item.username != username) {
+                    return item;
+                  }
+                  item.aliases.push(alias);
+                  return item;
+                });    
+              });
+            }
+          )
+          .catch(function(err) {
+            console.log('Fetch Error :-S', err);
+          }
+        );
+        }
     }
 },
   template: `
@@ -286,7 +362,12 @@ Vue.component('list-users', {
             <tbody>
               <tr v-for="u in users" :class="{'info' : isSelected(u.username)}">
                 <td>
-                  <button type="button" class="btn btn-info btn-sm" @click="selectUser(u.username)"><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span></button><span style="padding-left:1em;">{{u.username}}</span>
+                  <button type="button" class="btn btn-info btn-sm" @click="selectUser(u.username)"><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span></button>
+                  <span style="padding-left:1em;">{{u.username}}</span>
+                  <span class="label label-success" style="margin-left:0.5em" v-for="alias in u.aliases">
+                  {{alias}}<span class="glyphicon glyphicon-remove" aria-hidden="true" style="padding-left:0.5em" @click="removeAlias(u.username, alias)"></span>
+                  </span>
+                    <button type="button" class="btn btn-primary btn-xs"><span class="glyphicon glyphicon-plus" aria-hidden="true" @click="addAlias(u.username)"></span></button>
                 </td>
                 <td>
                   <select v-model="u.active_token" v-on:change="selectActiveToken(u.username, u.active_token)">

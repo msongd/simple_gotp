@@ -41,17 +41,36 @@ func (env *Env) IsUserAllowAccess(username string, r *http.Request) bool {
 }
 
 func (env *Env) VerifyHandler(w http.ResponseWriter, r *http.Request) {
+	var user string
+	var u string
+	var found bool
 	o := &OTPVerifyRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&o); err != nil {
 		log.Println(err)
 		http.Error(w, "Error decoding response object", http.StatusBadRequest)
 		return
 	}
-	u, found := env.Db.GetActiveTokenURL(o.Username)
-	if !found {
-		log.Println("Not found active token for user:", o.Username)
-		http.Error(w, "Not found", http.StatusNotFound)
-		return
+	if env.Db.HasUser(o.Username) {
+		u, found = env.Db.GetActiveTokenURL(o.Username)
+		if !found {
+			log.Println("Not found active token for user:", o.Username)
+			http.Error(w, "Not found", http.StatusNotFound)
+			return
+		}
+	} else {
+		log.Println("Not found user:", o.Username, ", trying finding real user in aliases table")
+		user, found = env.Db.FindUserFor(o.Username)
+		if !found {
+			log.Println("Not found real user for:", o.Username)
+			http.Error(w, "Not found", http.StatusNotFound)
+			return
+		}
+		u, found = env.Db.GetActiveTokenURL(user)
+		if !found {
+			log.Println("Not found active token for user:", user)
+			http.Error(w, "Not found", http.StatusNotFound)
+			return
+		}
 	}
 	k, err := otp.NewKeyFromURL(u)
 	if err != nil {
@@ -227,10 +246,89 @@ func (env *Env) UpdateUserHandler(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		log.Println("Unable to set active token for ", username)
 	}
+	/*
+		ok, _ := env.Db.UpdateUser(username, u)
+		if !ok {
+			log.Printf("Unable to update for %s with: %v\n", username, u)
+			http.Error(w, "Empty active token info", http.StatusBadRequest)
+			return
+		}*/
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "{}")
 }
+func (env *Env) RemoveAliasHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	//w.WriteHeader(http.StatusOK)
+	//fmt.Fprintf(w, "In Home\n")
+	username, found := vars["user"]
+	if !found {
+		log.Println("Not found username in uri")
+		http.Error(w, "Error getting username in uri", http.StatusBadRequest)
+		return
+	}
+	if !env.IsUserAllowAccess(username, r) {
+		log.Println("Logged user is not allow to update for user:", username)
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+	alias, found := vars["alias"]
+	if !found {
+		log.Println("Not found alias in uri")
+		http.Error(w, "Error getting alias in uri", http.StatusBadRequest)
+		return
+	}
+	ok := env.Db.RemoveAlias(username, alias)
+	if !ok {
+		log.Printf("Unable to remove alias %s for user %s\n", alias, username)
+		http.Error(w, "Unable to remove alias", http.StatusNotFound)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "{}")
+}
+
+func (env *Env) AddAliasHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	//w.WriteHeader(http.StatusOK)
+	//fmt.Fprintf(w, "In Home\n")
+	username, found := vars["user"]
+	if !found {
+		log.Println("Not found username in uri")
+		http.Error(w, "Error getting username in uri", http.StatusBadRequest)
+		return
+	}
+	if !env.IsUserAllowAccess(username, r) {
+		log.Println("Logged user is not allow to update for user:", username)
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+
+	a := &struct {
+		Alias string
+	}{}
+	if err := json.NewDecoder(r.Body).Decode(&a); err != nil {
+		log.Println(err)
+		http.Error(w, "Error decoding response object", http.StatusBadRequest)
+		return
+	}
+	if a.Alias == "" {
+		log.Println("Empty alias")
+		http.Error(w, "Empty alias", http.StatusBadRequest)
+		return
+	}
+	ok := env.Db.AddAlias(username, a.Alias)
+	if !ok {
+		log.Printf("Unable to add alias %s for user %s\n", a.Alias, username)
+		http.Error(w, "Unable to add alias", http.StatusNotFound)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "{}")
+}
+
 func (env *Env) GetAllTokenHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	//w.WriteHeader(http.StatusOK)
@@ -549,7 +647,11 @@ func (env *Env) ConfigHandler(w http.ResponseWriter, r *http.Request) {
 func (env *Env) AuthenticationMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if env.Cfg.NoAuth {
-			next.ServeHTTP(w, r)
+			username := ""
+			isAdmin := true
+			ctx := context.WithValue(r.Context(), UsernameContextKey, username)
+			ctx = context.WithValue(ctx, IsAdminContextKey, isAdmin)
+			next.ServeHTTP(w, r.WithContext(ctx))
 			return
 		}
 		tokenBearer := r.Header.Get("Authorization")

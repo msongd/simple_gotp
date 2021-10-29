@@ -29,6 +29,7 @@ type UserDetail struct {
 	Tokens      []TokenDetail `json:"tokens"`
 	Total       int           `json:"total"`
 	CurrentCode string        `json:"current_code"`
+	Aliases     []string      `json:"aliases"`
 }
 
 type OTPVerifyRequest struct {
@@ -38,18 +39,21 @@ type OTPVerifyRequest struct {
 
 type OtpConfig struct {
 	sync.RWMutex
-	Users map[string]*UserDetail
+	Users   map[string]*UserDetail
+	Aliases map[string]string
 }
 
 func NewUser() *UserDetail {
 	u := UserDetail{}
 	u.Tokens = make([]TokenDetail, 0)
+	u.Aliases = make([]string, 0)
 	return &u
 }
 
 func NewOtpConfig() *OtpConfig {
 	m := OtpConfig{}
 	m.Users = make(map[string]*UserDetail)
+	m.Aliases = make(map[string]string)
 	return &m
 }
 
@@ -58,6 +62,7 @@ func (u *UserDetail) Cloned(nowTime time.Time) *UserDetail {
 	newUser.ActiveToken = u.ActiveToken
 	newUser.Username = u.Username
 	newUser.Tokens = make([]TokenDetail, len(u.Tokens))
+	newUser.Aliases = make([]string, len(u.Aliases))
 	//copy(newUser.Tokens, u.Tokens)
 	for i, t := range u.Tokens {
 		newUser.Tokens[i].ID = t.ID
@@ -77,6 +82,7 @@ func (u *UserDetail) Cloned(nowTime time.Time) *UserDetail {
 		}
 	}
 	newUser.Total = len(u.Tokens)
+	copy(newUser.Aliases, u.Aliases)
 	return newUser
 }
 
@@ -141,7 +147,12 @@ func (cfg *OtpConfig) GetAllUserOTPs() []*UserDetail {
 func (cfg *OtpConfig) AddUser(username string) (bool, error) {
 	cfg.Lock()
 	defer cfg.Unlock()
-	_, found := cfg.Users[username]
+	existingUser, found := cfg.Aliases[username]
+	if found {
+		log.Println("username:", username, " is already an alias of:", existingUser)
+		return false, nil
+	}
+	_, found = cfg.Users[username]
 	if !found {
 		u := NewUser()
 		u.Username = username
@@ -149,6 +160,109 @@ func (cfg *OtpConfig) AddUser(username string) (bool, error) {
 		return true, nil
 	}
 	return false, nil
+}
+
+func (cfg *OtpConfig) UpdateUser(username string, user *UserDetail) (*UserDetail, error) {
+	cfg.Lock()
+	defer cfg.Unlock()
+	// filter out all duplicate in new alias if any
+	updatedAlias := make([]string, 0)
+	for _, a := range user.Aliases {
+		_, found := cfg.Users[a]
+		if !found {
+			updatedAlias = append(updatedAlias, a)
+		}
+	}
+	currentUser, found := cfg.Users[username]
+	if !found {
+		return nil, nil
+	}
+	currentUser.ActiveToken = user.ActiveToken
+	// find deleted aliases & delete from Alias map
+	for i := 0; i < len(currentUser.Aliases); i++ {
+		isInNew := false
+		for j := 0; j < len(updatedAlias); j++ {
+			if currentUser.Aliases[i] == updatedAlias[j] {
+				isInNew = true
+			}
+		}
+		if !isInNew {
+			// removed aliaes -> remove from alias map
+			_, found = cfg.Aliases[currentUser.Aliases[i]]
+			if found {
+				delete(cfg.Aliases, currentUser.Aliases[i])
+			}
+		}
+	}
+	//
+	copy(currentUser.Aliases, updatedAlias)
+	copy(user.Aliases, updatedAlias)
+	return user, nil
+}
+
+func (cfg *OtpConfig) AddAlias(username string, alias string) bool {
+	cfg.Lock()
+	defer cfg.Unlock()
+	u, found := cfg.Users[username]
+	if !found {
+		log.Println("AddAlias:no such user:", username)
+		return false
+	}
+	for i := 0; i < len(u.Aliases); i++ {
+		if u.Aliases[i] == alias {
+			log.Println("AddAlias:exist alias:", alias)
+			return false
+		}
+	}
+	_, found = cfg.Users[alias]
+	if found {
+		log.Println("AddAlias:exist username:", alias)
+		return false
+	}
+	u.Aliases = append(u.Aliases, alias)
+	cfg.Aliases[alias] = username
+	return true
+}
+
+func (cfg *OtpConfig) RemoveAlias(username string, alias string) bool {
+	cfg.Lock()
+	defer cfg.Unlock()
+	u, found := cfg.Users[username]
+	if !found {
+		log.Println("RemoveAlias:no such user:", username)
+		return false
+	}
+	a, found := cfg.Aliases[alias]
+	if !found {
+		log.Println("RemoveAlias:no such alias:", alias)
+		return false
+	}
+	if a != u.Username {
+		log.Println("RemoveAlias:inconsistent Alias map and User map")
+		return false
+	}
+	indexToRemove := -1
+	for i := 0; i < len(u.Aliases); i++ {
+		if u.Aliases[i] == alias {
+			indexToRemove = i
+			break
+		}
+	}
+	if indexToRemove < 0 {
+		log.Println("RemoveAlias:no such alias:", alias)
+		return false
+	}
+	u.Aliases = append(u.Aliases[:indexToRemove], u.Aliases[indexToRemove+1:]...)
+	delete(cfg.Aliases, alias)
+	return true
+}
+
+func (cfg *OtpConfig) FindUserFor(alias string) (string, bool) {
+	cfg.Lock()
+	defer cfg.Unlock()
+	log.Printf("+%v\n", cfg.Aliases)
+	u, found := cfg.Aliases[alias]
+	return u, found
 }
 
 func (cfg *OtpConfig) HasUser(username string) bool {
@@ -356,6 +470,12 @@ func LoadFromFile(filename string) (*OtpConfig, error) {
 		return nil, err
 	}
 	json.Unmarshal(byteValue, cfg)
+	// populate aliases
+	for _, u := range cfg.Users {
+		for _, a := range u.Aliases {
+			cfg.Aliases[a] = u.Username
+		}
+	}
 	return cfg, nil
 }
 func (cfg *OtpConfig) SaveToFile(filename string) error {

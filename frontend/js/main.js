@@ -62,7 +62,7 @@ function createVueApp(kc) {
           if ('tokenParsed' in kc) {
             this.tokenParsed = kc.tokenParsed;
           }
-          if (ADMIN_ROLE != "" && kc.tokenParsed.realm_access.roles.includes(ADMIN_ROLE)) {
+          if (typeof ADMIN_ROLE !== 'undefined' && ADMIN_ROLE != "" && kc.tokenParsed.realm_access.roles.includes(ADMIN_ROLE)) {
             this.isAdmin = true;
           } else {
             this.isAdmin = false;

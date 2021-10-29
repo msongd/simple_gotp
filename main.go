@@ -90,6 +90,9 @@ func main() {
 	if err != nil {
 		log.Fatal("Unable to load data file, err:", err)
 	}
+	if *DEBUG_FLAG {
+		log.Printf("%+v\n", db)
+	}
 	workingEnv.Db = db
 	workingEnv.Cfg = GLOBAL_CFG
 	defer workingEnv.Db.SaveToFile(GLOBAL_CFG.DataFile)
