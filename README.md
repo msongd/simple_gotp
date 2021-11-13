@@ -45,7 +45,9 @@ A very simple TOTP (Time based OTP - compatible with Google Authenticator app) m
 
 ## Usage
 
-- `simple_gotp -f config.json`
+- `make`
+- `bin/simple_gotp -f conf/config.json`
+- simple prog to verify TOTP is included in cli directory, make with `make bin/otp_cli`. This prog can be used with FreeRADIUS "exec echo" module to provide simple RADIUS based 2FA.
 
 ## Sample config with explaination
 
@@ -69,3 +71,11 @@ A very simple TOTP (Time based OTP - compatible with Google Authenticator app) m
   }
 }
 ```
+
+## Todo
+
+- [x] TOTP generation & managemnt
+- [x] Aliases
+- [ ] Save data at regular interval or at changes
+- [ ] Implement storage interface to be able to switch to DB/NoSQL instead of just plain json file
+- [ ] Svelte front end instead of vuejs 2.x
