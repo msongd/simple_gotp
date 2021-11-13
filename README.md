@@ -7,6 +7,7 @@ A very simple TOTP (Time based OTP - compatible with Google Authenticator app) m
  - Admin user can create / delete username
  - User can create token
  - User can choose active token
+ - User can add aliases.
 
 ## Authenticate / Authorization
  - Use external OpenID Connect for authentication (currently only keycloak is supported), username is from field preferred_username in jwt
@@ -20,25 +21,24 @@ A very simple TOTP (Time based OTP - compatible with Google Authenticator app) m
 
 ## Endpoint
  - API endpoints are listed in router.go and are pretty self explain
-```
-	r.HandleFunc("/public/verify", env.VerifyHandler).Methods("POST")
-    /// should have jwt ready when access below
-	authRoute := r.PathPrefix("/auth").Subrouter()
-	authRoute.Use(env.AuthenticationMiddleware)
-	authRoute.HandleFunc("/user/{user}", env.GetUserHandler).Methods("GET")
-	authRoute.HandleFunc("/user/{user}", env.DeleteUserHandler).Methods("DELETE")
-	authRoute.HandleFunc("/user/{user}", env.UpdateUserHandler).Methods("POST")
-	authRoute.HandleFunc("/user", env.GetAllUserHandler).Methods("GET")
-	authRoute.HandleFunc("/user", env.AddUserHandler).Methods("POST")
-    // obtain QR image (contain secret) of a token
-	authRoute.HandleFunc("/qr/{user}/{token}", env.GetTokenQRHandler).Methods("POST")
-	authRoute.HandleFunc("/otp/{user}/{token}", env.GetOTPHandler).Methods("GET")
-	authRoute.HandleFunc("/otp", env.GetAllOTPHandler).Methods("GET")
-	authRoute.HandleFunc("/token/{user}/import", env.ImportTokenHandler).Methods("POST")
-	authRoute.HandleFunc("/token/{user}/{token}", env.DeleteTokenHandler).Methods("DELETE")
-	authRoute.HandleFunc("/token/{user}", env.GetAllTokenHandler).Methods("GET")
-	authRoute.HandleFunc("/token/{user}", env.AddTokenHandler).Methods("POST")
-```
+
+  | VERB | URL  | DATA | Notes |
+  | ---- | ---- | ---- | ----- |
+  | DELETE | /user/{user}/alias/{alias} | | |
+	| POST   | /user/{user}/alias | { alias: "alias" } | create new alias "alias" |
+	| GET | /user/{user} | | |
+	| DELETE | /user/{user} | | |
+	| POST | /user/{user} | { active_token: "tokenId" } | set active token |
+	| GET | /user | | |
+	| POST | /user | { username: "newUsername" } | |
+  | POST | /qr/{user}/{token} | {} | obtain QR image (contain secret) of a token, return { img: "base64encoded" } |
+	| GET | /otp/{user}/{token} | | |
+	| GET | /otp | | get all current totp of users |
+	| POST | /token/{user}/import | { url: "newTokenUrl" } | import existing TOTP token |
+	| DELETE | /token/{user}/{token} | | |
+	| GET | /token/{user} | | |
+	| POST | /token/{user} | { issuer: "newTokenIssuer"} | create new TOTP with issuer name "newTokenIssuer" |
+
 ## Usage
  - `simple_gotp -f config.json`
 
