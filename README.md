@@ -25,19 +25,19 @@ A very simple TOTP (Time based OTP - compatible with Google Authenticator app) m
   | VERB | URL  | DATA | Notes |
   | ---- | ---- | ---- | ----- |
   | DELETE | /user/{user}/alias/{alias} | | |
-	| POST   | /user/{user}/alias | { alias: "alias" } | create new alias "alias" |
+	| POST   | /user/{user}/alias | `{ alias: "alias" }` | create new alias "alias" |
 	| GET | /user/{user} | | |
 	| DELETE | /user/{user} | | |
-	| POST | /user/{user} | { active_token: "tokenId" } | set active token |
+	| POST | /user/{user} | `{ active_token: "tokenId" }` | set active token |
 	| GET | /user | | |
-	| POST | /user | { username: "newUsername" } | |
-  | POST | /qr/{user}/{token} | {} | obtain QR image (contain secret) of a token, return { img: "base64encoded" } |
+	| POST | /user | `{ username: "newUsername" }` | |
+  | POST | /qr/{user}/{token} | `{}` | obtain QR image (contain secret) of a token, return `{ img: "base64encoded" }` |
 	| GET | /otp/{user}/{token} | | |
 	| GET | /otp | | get all current totp of users |
-	| POST | /token/{user}/import | { url: "newTokenUrl" } | import existing TOTP token |
+	| POST | /token/{user}/import | `{ url: "newTokenUrl" }` | import existing TOTP token |
 	| DELETE | /token/{user}/{token} | | |
 	| GET | /token/{user} | | |
-	| POST | /token/{user} | { issuer: "newTokenIssuer"} | create new TOTP with issuer name "newTokenIssuer" |
+	| POST | /token/{user} | `{ issuer: "newTokenIssuer"}` | create new TOTP with issuer name "newTokenIssuer" |
 
 ## Usage
  - `simple_gotp -f config.json`
